@@ -13,5 +13,9 @@ class ProductRepository(private val dao: CheckStateDao) {
         dao.upsert(CheckStateEntity(key = key, isChecked = !currentValue))
     }
 
+    suspend fun setChecked(key: String, value: Boolean) {
+        dao.upsert(CheckStateEntity(key = key, isChecked = value))
+    }
+
     suspend fun resetAll() = dao.deleteAll()
 }

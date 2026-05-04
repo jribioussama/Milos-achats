@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.milos_achats.data.checkKey
+import com.example.milos_achats.data.confirmedKey
 import com.example.milos_achats.data.repository.ProductRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,14 @@ class BarProductsViewModel(private val repository: ProductRepository) : ViewMode
         viewModelScope.launch {
             repository.toggle(key, checkStates.value[key] ?: false)
         }
+    }
+
+    fun confirmOrder(dayIndex: Int) {
+        viewModelScope.launch { repository.setChecked(confirmedKey(dayIndex), true) }
+    }
+
+    fun unvalidateOrder(dayIndex: Int) {
+        viewModelScope.launch { repository.setChecked(confirmedKey(dayIndex), false) }
     }
 
     fun resetWeek() {

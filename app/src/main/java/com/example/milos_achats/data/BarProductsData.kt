@@ -1,5 +1,83 @@
 package com.example.milos_achats.data
 
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+
+data class DayInfo(
+    val name: String,
+    val dayNumber: String,
+    val isToday: Boolean,
+    val isEditable: Boolean,  // true uniquement pour la colonne J+1 de la fenêtre de commande
+)
+
+data class WeekInfo(
+    val monthHeader: String,
+    val days: List<DayInfo>,
+)
+
+/**
+ * La fenêtre de commande commence à 02:00 chaque jour et se termine à 01:59:59 le lendemain.
+ * Pendant cette fenêtre, seule la colonne J+1 (lendemain du jour d'ouverture) est éditable.
+ *
+ * Ex : ouverture le 04/05 à 14h → J+1 = 05/05 → colonne "Mar 05" éditable.
+ * Ex : ouverture le 05/05 à 01h → encore dans la fenêtre du 04/05 → J+1 = 05/05.
+ */
+fun getWeekInfo(): WeekInfo {
+    val now = Calendar.getInstance()
+
+    // Si l'heure est avant 02:00, on est encore dans la fenêtre du jour précédent.
+    val orderingDay = Calendar.getInstance().apply {
+        timeInMillis = now.timeInMillis
+        if (now.get(Calendar.HOUR_OF_DAY) < 2) add(Calendar.DAY_OF_MONTH, -1)
+    }
+    // J+1 = lendemain du jour de commande
+    val editableDate = Calendar.getInstance().apply {
+        timeInMillis = orderingDay.timeInMillis
+        add(Calendar.DAY_OF_MONTH, 1)
+    }
+
+    val dayOfWeek = now.get(Calendar.DAY_OF_WEEK)
+    val daysFromMonday = when (dayOfWeek) {
+        Calendar.SUNDAY -> 6
+        else -> dayOfWeek - Calendar.MONDAY
+    }
+    val monday = Calendar.getInstance().apply {
+        timeInMillis = now.timeInMillis
+        // Si avant 02:00, la semaine courante est celle du jour précédent
+        if (now.get(Calendar.HOUR_OF_DAY) < 2) add(Calendar.DAY_OF_MONTH, -1)
+        // Rewind to Monday of that day
+        val dow = get(Calendar.DAY_OF_WEEK)
+        val back = when (dow) { Calendar.SUNDAY -> 6; else -> dow - Calendar.MONDAY }
+        add(Calendar.DAY_OF_MONTH, -back)
+    }
+
+    val names = listOf("Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim")
+    val monthFmt = SimpleDateFormat("MMMM yyyy", Locale.FRENCH)
+
+    val days = (0..6).map { i ->
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = monday.timeInMillis
+            add(Calendar.DAY_OF_MONTH, i)
+        }
+        val sameDay = { a: Calendar, b: Calendar ->
+            a.get(Calendar.YEAR) == b.get(Calendar.YEAR) &&
+                a.get(Calendar.MONTH) == b.get(Calendar.MONTH) &&
+                a.get(Calendar.DAY_OF_MONTH) == b.get(Calendar.DAY_OF_MONTH)
+        }
+        DayInfo(
+            name = names[i],
+            dayNumber = "%02d".format(cal.get(Calendar.DAY_OF_MONTH)),
+            isToday = sameDay(cal, now),
+            isEditable = sameDay(cal, editableDate),
+        )
+    }
+    return WeekInfo(
+        monthHeader = monthFmt.format(monday.time).replaceFirstChar { it.uppercase() },
+        days = days,
+    )
+}
+
 data class BarProduct(
     val id: String,
     val nameFr: String,
@@ -140,6 +218,7 @@ val BAR_SUPPLIERS: List<SupplierSection> = listOf(
     ),
 )
 
-val DAYS = listOf("Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim")
+const val DAY_COUNT = 7
 
 fun checkKey(productId: String, dayIndex: Int) = "${productId}_d${dayIndex}"
+fun confirmedKey(dayIndex: Int) = "CONFIRMED_d${dayIndex}"
