@@ -29,10 +29,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.ui.viewmodel.HomeViewModel
 
-private val GreenConfirmed = Color(0xFF388E3C)
+private val GreenConfirmed = Color(0xFF2E7D32)
 private val GreenBgLight   = Color(0xFF4CAF50)
-private val AmberColor     = Color(0xFFE65100)
-private val AmberBgLight   = Color(0xFFFF9800)
+private val AmberColor     = Color(0xFFD84315)
+private val AmberBgLight   = Color(0xFFFF7043)
 
 @Composable
 fun MainScreen(onBarClick: () -> Unit, onManagerClick: () -> Unit) {

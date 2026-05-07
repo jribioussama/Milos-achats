@@ -41,7 +41,7 @@ private val NAME_COL = 160.dp
 private val QTY_COL  = 52.dp
 private val DAY_COL  = 44.dp
 
-private val GreenConfirmed = Color(0xFF388E3C)
+private val GreenConfirmed = Color(0xFF2E7D32)
 private val GreenBg        = Color(0xFF4CAF50)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -385,7 +385,7 @@ private fun OrderConfirmDialog(
 @Composable
 private fun TableHeader(hScroll: ScrollState, weekInfo: WeekInfo, isConfirmed: Boolean) {
     val divColor = MaterialTheme.colorScheme.outline
-    val bgColor  = MaterialTheme.colorScheme.secondaryContainer
+    val bgColor  = MaterialTheme.colorScheme.surfaceVariant
 
     // Ligne 1 : mois
     Row(
@@ -408,7 +408,7 @@ private fun TableHeader(hScroll: ScrollState, weekInfo: WeekInfo, isConfirmed: B
                     text       = weekInfo.monthHeader,
                     style      = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onSecondaryContainer,
+                    color      = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -669,7 +669,7 @@ private fun HeaderCell(text: String, width: Dp, fontWeight: FontWeight = FontWei
             text      = text,
             style     = MaterialTheme.typography.labelMedium,
             fontWeight = fontWeight,
-            color     = MaterialTheme.colorScheme.onSecondaryContainer,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
