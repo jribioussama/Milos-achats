@@ -2,17 +2,19 @@ package com.example.milos_achats.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,10 +29,56 @@ private val AmberColor     = Color(0xFFE65100)
 private val AmberBgLight   = Color(0xFFFF9800)
 
 @Composable
-fun MainScreen(onBarClick: () -> Unit) {
+fun MainScreen(onBarClick: () -> Unit, onManagerClick: () -> Unit) {
     val app         = LocalContext.current.applicationContext as MilosApp
     val vm          = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
     val isConfirmed by vm.isOrderConfirmed.collectAsStateWithLifecycle()
+
+    var showPinDialog by remember { mutableStateOf(false) }
+    var pinInput      by remember { mutableStateOf("") }
+    var pinError      by remember { mutableStateOf(false) }
+
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false; pinInput = ""; pinError = false },
+            title = { Text("Accès Gérant") },
+            text  = {
+                Column {
+                    Text("Saisissez votre code d'accès")
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value         = pinInput,
+                        onValueChange = { if (it.length <= 4) { pinInput = it; pinError = false } },
+                        label         = { Text("Code") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = PasswordVisualTransformation(),
+                        isError       = pinError,
+                        supportingText = if (pinError) {
+                            { Text("Code incorrect", color = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (pinInput == "1224") {
+                        showPinDialog = false
+                        pinInput = ""
+                        pinError = false
+                        onManagerClick()
+                    } else {
+                        pinError = true
+                    }
+                }) { Text("Valider") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinDialog = false; pinInput = ""; pinError = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -74,6 +122,26 @@ fun MainScreen(onBarClick: () -> Unit) {
             Text(
                 text       = "🍹  Produits Bar",
                 fontSize   = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // CTA gérant (disponible seulement si commande validée)
+        Button(
+            onClick  = { showPinDialog = true },
+            enabled  = isConfirmed,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            shape    = RoundedCornerShape(16.dp),
+            colors   = ButtonDefaults.buttonColors(
+                containerColor         = MaterialTheme.colorScheme.secondary,
+                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            ),
+        ) {
+            Text(
+                text       = "🔐  Vérifier commande (Gérant)",
+                fontSize   = 18.sp,
                 fontWeight = FontWeight.SemiBold,
             )
         }
