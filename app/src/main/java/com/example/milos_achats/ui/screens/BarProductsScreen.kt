@@ -67,6 +67,7 @@ fun BarProductsScreen(onBack: () -> Unit) {
     // ── États UI ───────────────────────────────────────────────────────────────
     var showDevalidateDialog by remember { mutableStateOf(false) }
     var showConfirmDialog    by remember { mutableStateOf(false) }
+    var showOrderSummary     by remember { mutableStateOf(false) }
 
     // ── Dialog dévalidation ────────────────────────────────────────────────────
     if (showDevalidateDialog && editableDay != null) {
@@ -99,6 +100,18 @@ fun BarProductsScreen(onBack: () -> Unit) {
                 showConfirmDialog = false
             },
             onDismiss = { showConfirmDialog = false }
+        )
+    }
+
+    // ── Dialog récap (lecture seule, commande déjà confirmée) ──────────────────
+    if (showOrderSummary && editableIndex >= 0) {
+        OrderConfirmDialog(
+            formattedDate = formattedDate,
+            checkStates   = checkStates,
+            editableIndex = editableIndex,
+            isReadOnly    = true,
+            onConfirm     = {},
+            onDismiss     = { showOrderSummary = false }
         )
     }
 
@@ -135,7 +148,8 @@ fun BarProductsScreen(onBack: () -> Unit) {
                     formattedDate = formattedDate,
                     checkedCount  = checkedCount,
                     isConfirmed   = isConfirmed,
-                    onClick       = { showConfirmDialog = true }
+                    onClick       = { showConfirmDialog = true },
+                    onViewOrder   = { showOrderSummary = true },
                 )
             }
         }
@@ -179,13 +193,15 @@ private fun ConfirmCta(
     checkedCount: Int,
     isConfirmed: Boolean,
     onClick: () -> Unit,
+    onViewOrder: () -> Unit,
 ) {
     Surface(shadowElevation = 8.dp) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (isConfirmed) {
                 // Bandeau vert "validée"
@@ -193,7 +209,7 @@ private fun ConfirmCta(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(GreenBg.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
@@ -209,6 +225,15 @@ private fun ConfirmCta(
                         fontWeight = FontWeight.SemiBold,
                         color = GreenConfirmed,
                     )
+                }
+                OutlinedButton(
+                    onClick  = onViewOrder,
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = GreenConfirmed),
+                    border   = androidx.compose.foundation.BorderStroke(1.dp, GreenConfirmed),
+                ) {
+                    Text("Vérifier la commande", fontWeight = FontWeight.SemiBold)
                 }
             } else {
                 Button(
@@ -248,6 +273,7 @@ private fun OrderConfirmDialog(
     editableIndex: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    isReadOnly: Boolean = false,
 ) {
     val groups = BAR_SUPPLIERS.mapNotNull { supplier ->
         val checked = supplier.products.filter {
@@ -334,15 +360,19 @@ private fun OrderConfirmDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Annuler") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = onConfirm,
-                        colors  = ButtonDefaults.buttonColors(containerColor = GreenConfirmed),
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Confirmer")
+                    if (isReadOnly) {
+                        Button(onClick = onDismiss) { Text("Fermer") }
+                    } else {
+                        TextButton(onClick = onDismiss) { Text("Annuler") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = onConfirm,
+                            colors  = ButtonDefaults.buttonColors(containerColor = GreenConfirmed),
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Confirmer")
+                        }
                     }
                 }
             }
