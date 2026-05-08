@@ -5,14 +5,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,16 +28,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.ui.viewmodel.HomeViewModel
 
-private val GreenConfirmed = Color(0xFF2E7D32)
-private val GreenBgLight   = Color(0xFF4CAF50)
-private val AmberColor     = Color(0xFFD84315)
-private val AmberBgLight   = Color(0xFFFF7043)
+private val StatusGreen = Color(0xFFA5D6A7)  // vert pastel sur fond bleu
+private val StatusRed   = Color(0xFFEF9A9A)  // rouge-corail sur fond bleu
 
 @Composable
-fun MainScreen(onBarClick: () -> Unit, onManagerClick: () -> Unit) {
+fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick: () -> Unit, onManagerClick: () -> Unit) {
     val app         = LocalContext.current.applicationContext as MilosApp
-    val vm          = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
-    val isConfirmed by vm.isOrderConfirmed.collectAsStateWithLifecycle()
+    val vm           = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
+    val ordersStatus by vm.ordersStatus.collectAsStateWithLifecycle()
+    val isConfirmed  = ordersStatus.barConfirmed
 
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput      by remember { mutableStateOf("") }
@@ -117,24 +115,29 @@ fun MainScreen(onBarClick: () -> Unit, onManagerClick: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(36.dp))
-        if (vm.formattedDate.isNotEmpty()) {
-            OrderStatusCard(
-                formattedDate = vm.formattedDate,
-                isConfirmed   = isConfirmed,
-            )
-            Spacer(Modifier.height(24.dp))
-        }
-        Button(
-            onClick  = onBarClick,
-            modifier = Modifier.fillMaxWidth().height(80.dp),
-            shape    = RoundedCornerShape(16.dp),
-        ) {
-            Text(
-                text       = "🍹  Produits Bar",
-                fontSize   = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        OrderCta(
+            emoji         = "🍹",
+            label         = "Produits Bar",
+            formattedDate = vm.formattedDate,
+            isConfirmed   = ordersStatus.barConfirmed,
+            onClick       = onBarClick,
+        )
+        Spacer(Modifier.height(12.dp))
+        OrderCta(
+            emoji         = "🍳",
+            label         = "Produits Cuisine",
+            formattedDate = vm.formattedDate,
+            isConfirmed   = ordersStatus.kitchenConfirmed,
+            onClick       = onKitchenClick,
+        )
+        Spacer(Modifier.height(12.dp))
+        OrderCta(
+            emoji         = "🧹",
+            label         = "Serveur & Ménage",
+            formattedDate = vm.formattedDate,
+            isConfirmed   = ordersStatus.serverConfirmed,
+            onClick       = onServerClick,
+        )
 
         // ── Séparateur ────────────────────────────────────────────
         Spacer(Modifier.weight(1f))
@@ -170,39 +173,84 @@ fun MainScreen(onBarClick: () -> Unit, onManagerClick: () -> Unit) {
 }
 
 @Composable
-private fun OrderStatusCard(formattedDate: String, isConfirmed: Boolean) {
-    val bgColor   = if (isConfirmed) GreenBgLight.copy(alpha = 0.12f)
-                    else AmberBgLight.copy(alpha = 0.12f)
-    val iconColor = if (isConfirmed) GreenConfirmed else AmberColor
-    val textColor = if (isConfirmed) GreenConfirmed else AmberColor
-    val icon      = if (isConfirmed) Icons.Default.CheckCircle else Icons.Default.Warning
-    val message   = if (isConfirmed)
-                        "Commande du $formattedDate validée"
-                    else
-                        "Commande du $formattedDate\nnon encore validée"
-
-    Surface(
-        shape  = RoundedCornerShape(14.dp),
-        color  = bgColor,
-        modifier = Modifier.fillMaxWidth(),
+private fun OrderCta(
+    emoji: String,
+    label: String,
+    formattedDate: String,
+    isConfirmed: Boolean,
+    onClick: () -> Unit,
+) {
+    val statusColor = if (isConfirmed) StatusGreen else StatusRed
+    val statusText  = when {
+        formattedDate.isEmpty() -> null
+        isConfirmed  -> "✓  Commande du $formattedDate — validée"
+        else         -> "●  Commande du $formattedDate — non encore validée"
+    }
+    Button(
+        onClick  = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (statusText != null) 90.dp else 72.dp),
+        shape    = RoundedCornerShape(16.dp),
+        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint     = iconColor,
-                modifier = Modifier.size(28.dp),
-            )
-            Spacer(Modifier.width(12.dp))
             Text(
-                text       = message,
-                style      = MaterialTheme.typography.bodyMedium,
+                text       = "$emoji  $label",
+                fontSize   = 20.sp,
                 fontWeight = FontWeight.SemiBold,
-                color      = textColor,
+                color      = Color.White,
             )
+            if (statusText != null) {
+                Spacer(Modifier.height(6.dp))
+                HorizontalDivider(
+                    color     = Color.White.copy(alpha = 0.20f),
+                    thickness = 1.dp,
+                )
+                Spacer(Modifier.height(6.dp))
+                AutoSizeText(
+                    text     = statusText,
+                    color    = statusColor,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun AutoSizeText(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    maxFontSize: Float = 14f,
+    minFontSize: Float = 8f,
+) {
+    var fontSize    by remember(text) { mutableFloatStateOf(maxFontSize) }
+    var readyToDraw by remember(text) { mutableStateOf(false) }
+    Text(
+        text       = text,
+        color      = color,
+        fontSize   = fontSize.sp,
+        fontWeight = FontWeight.Normal,
+        textAlign  = TextAlign.Center,
+        maxLines   = 1,
+        softWrap   = false,
+        overflow   = TextOverflow.Clip,
+        modifier   = modifier.drawWithContent { if (readyToDraw) drawContent() },
+        onTextLayout = { result ->
+            if (result.didOverflowWidth && fontSize > minFontSize) {
+                fontSize -= 1f
+                readyToDraw = false
+            } else {
+                readyToDraw = true
+            }
+        },
+    )
 }

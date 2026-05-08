@@ -5,10 +5,11 @@ import java.util.Calendar
 import java.util.Locale
 
 data class DayInfo(
-    val name: String,
+    val name: String,         // abrégé : "Sam"
+    val fullName: String,     // complet : "Samedi"
     val dayNumber: String,
     val isToday: Boolean,
-    val isEditable: Boolean,  // true uniquement pour la colonne J+1 de la fenêtre de commande
+    val isEditable: Boolean,
 )
 
 data class WeekInfo(
@@ -52,7 +53,8 @@ fun getWeekInfo(): WeekInfo {
         add(Calendar.DAY_OF_MONTH, -back)
     }
 
-    val names = listOf("Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim")
+    val names     = listOf("Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim")
+    val fullNames = listOf("Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche")
     val monthFmt = SimpleDateFormat("MMMM yyyy", Locale.FRENCH)
 
     val days = (0..6).map { i ->
@@ -66,9 +68,10 @@ fun getWeekInfo(): WeekInfo {
                 a.get(Calendar.DAY_OF_MONTH) == b.get(Calendar.DAY_OF_MONTH)
         }
         DayInfo(
-            name = names[i],
-            dayNumber = "%02d".format(cal.get(Calendar.DAY_OF_MONTH)),
-            isToday = sameDay(cal, now),
+            name       = names[i],
+            fullName   = fullNames[i],
+            dayNumber  = "%02d".format(cal.get(Calendar.DAY_OF_MONTH)),
+            isToday    = sameDay(cal, now),
             isEditable = sameDay(cal, editableDate),
         )
     }
