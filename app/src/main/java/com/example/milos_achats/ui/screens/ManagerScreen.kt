@@ -7,6 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,9 +89,14 @@ fun ManagerScreen(onBack: () -> Unit) {
         }
     }
 
+    val mergedGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(supplierGroups, kitchenGroups, serverGroups) {
+        mergeOrderGroups(supplierGroups, kitchenGroups, serverGroups)
+    }
+
     var showSummary        by remember { mutableStateOf(false) }
     var showKitchenSummary by remember { mutableStateOf(false) }
     var showServerSummary  by remember { mutableStateOf(false) }
+    var showMergedSummary  by remember { mutableStateOf(false) }
     var isGenerating  by remember { mutableStateOf(false) }
     val snackbarState  = remember { SnackbarHostState() }
     val scope          = rememberCoroutineScope()
@@ -98,7 +106,7 @@ fun ManagerScreen(onBack: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            launchGeneration(scope, context, supplierGroups, formattedDate, snackbarState) {
+            launchGeneration(scope, context, mergedGroups, formattedDate, snackbarState) {
                 isGenerating = it
             }
         } else {
@@ -114,9 +122,17 @@ fun ManagerScreen(onBack: () -> Unit) {
                 return
             }
         }
-        launchGeneration(scope, context, supplierGroups, formattedDate, snackbarState) {
+        launchGeneration(scope, context, mergedGroups, formattedDate, snackbarState) {
             isGenerating = it
         }
+    }
+
+    if (showMergedSummary && editableIndex >= 0) {
+        ManagerSummaryDialog(
+            title          = "Commande complète — $formattedDate",
+            supplierGroups = mergedGroups,
+            onDismiss      = { showMergedSummary = false },
+        )
     }
 
     if (showSummary && editableIndex >= 0) {
@@ -164,6 +180,7 @@ fun ManagerScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .padding(horizontal = 24.dp)
                 .navigationBarsPadding(),
@@ -186,6 +203,37 @@ fun ManagerScreen(onBack: () -> Unit) {
                 )
             }
             Spacer(Modifier.height(32.dp))
+
+            // ── Commande consolidée ───────────────────────────────
+            Button(
+                onClick  = { showMergedSummary = true },
+                enabled  = mergedGroups.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth().height(72.dp),
+                shape    = RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor         = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                ),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("📦  Toute la commande", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    if (mergedGroups.isNotEmpty()) {
+                        Text(
+                            text     = "${mergedGroups.size} fournisseur(s) · ${mergedGroups.sumOf { it.second.size }} article(s)",
+                            fontSize = 12.sp,
+                            color    = Color.White.copy(alpha = 0.80f),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            HorizontalDivider(
+                color     = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp,
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // ── Vérification par type ─────────────────────────────
             Button(
                 onClick  = { showSummary = true },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
@@ -198,9 +246,6 @@ fun ManagerScreen(onBack: () -> Unit) {
                 onClick  = { showKitchenSummary = true },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                ),
             ) {
                 Text("🍳  Vérifier commande Cuisine", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -209,22 +254,19 @@ fun ManagerScreen(onBack: () -> Unit) {
                 onClick  = { showServerSummary = true },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                ),
             ) {
-                Text("🧹  Vérifier commande Serveur & Ménage", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("🫧  Vérifier commande Serveur & Ménage", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
 
             // ── Séparateur ────────────────────────────────────────
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(40.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(20.dp))
 
             // ── Zone basse : génération ───────────────────────────
             Button(
                 onClick  = { onGenerateClick() },
-                enabled  = supplierGroups.isNotEmpty() && !isGenerating,
+                enabled  = mergedGroups.isNotEmpty() && !isGenerating,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
                 colors   = ButtonDefaults.buttonColors(
@@ -246,8 +288,8 @@ fun ManagerScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text  = if (supplierGroups.isNotEmpty())
-                            "${supplierGroups.size} fournisseur(s) — ${supplierGroups.sumOf { it.second.size }} article(s)"
+                text  = if (mergedGroups.isNotEmpty())
+                            "${mergedGroups.size} fournisseur(s) — ${mergedGroups.sumOf { it.second.size }} article(s)"
                         else
                             "Aucune commande validée",
                 style = MaterialTheme.typography.bodySmall,
@@ -256,6 +298,33 @@ fun ManagerScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+// ── Fusion des commandes par fournisseur ──────────────────────────────────────
+
+private fun mergeOrderGroups(
+    vararg groupLists: List<Pair<SupplierSection, List<BarProduct>>>
+): List<Pair<SupplierSection, List<BarProduct>>> {
+    val supplierRef = mutableMapOf<String, SupplierSection>()
+    val bySupplier  = mutableMapOf<String, MutableMap<String, BarProduct>>()
+
+    for (list in groupLists) {
+        for ((supplier, products) in list) {
+            supplierRef.getOrPut(supplier.id) { supplier }
+            val nameMap = bySupplier.getOrPut(supplier.id) { mutableMapOf() }
+            for (p in products) {
+                val key = p.nameFr.trim().lowercase()
+                val cur = nameMap[key]
+                // même produit dans plusieurs listes → on garde la quantité max
+                if (cur == null || p.quantity > cur.quantity) nameMap[key] = p
+            }
+        }
+    }
+
+    return supplierRef.keys.mapNotNull { id ->
+        val products = bySupplier[id]?.values?.sortedBy { it.nameFr } ?: return@mapNotNull null
+        if (products.isEmpty()) null else supplierRef[id]!! to products
+    }.sortedBy { it.first.name }
 }
 
 // ── Lancement de la génération en arrière-plan ────────────────────────────────

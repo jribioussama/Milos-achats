@@ -2,6 +2,8 @@ package com.example.milos_achats.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,15 +30,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.ui.viewmodel.HomeViewModel
 
-private val StatusGreen = Color(0xFFA5D6A7)  // vert pastel sur fond bleu
-private val StatusRed   = Color(0xFFEF9A9A)  // rouge-corail sur fond bleu
+private val StatusGreen = Color(0xFF81C784)  // vert pastel légèrement foncé sur fond bleu
+private val StatusRed   = Color(0xFFE57373)  // rouge-corail légèrement foncé sur fond bleu
 
 @Composable
 fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick: () -> Unit, onManagerClick: () -> Unit) {
     val app         = LocalContext.current.applicationContext as MilosApp
-    val vm           = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
-    val ordersStatus by vm.ordersStatus.collectAsStateWithLifecycle()
-    val isConfirmed  = ordersStatus.barConfirmed
+    val vm            = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
+    val ordersStatus  by vm.ordersStatus.collectAsStateWithLifecycle()
+    val formattedDate by vm.formattedDate.collectAsStateWithLifecycle()
+    val isConfirmed   = ordersStatus.barConfirmed
 
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput      by remember { mutableStateOf("") }
@@ -87,6 +90,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -118,7 +122,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
         OrderCta(
             emoji         = "🍹",
             label         = "Produits Bar",
-            formattedDate = vm.formattedDate,
+            formattedDate = formattedDate,
             isConfirmed   = ordersStatus.barConfirmed,
             onClick       = onBarClick,
         )
@@ -126,21 +130,21 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
         OrderCta(
             emoji         = "🍳",
             label         = "Produits Cuisine",
-            formattedDate = vm.formattedDate,
+            formattedDate = formattedDate,
             isConfirmed   = ordersStatus.kitchenConfirmed,
             onClick       = onKitchenClick,
         )
         Spacer(Modifier.height(12.dp))
         OrderCta(
-            emoji         = "🧹",
+            emoji         = "🫧",
             label         = "Serveur & Ménage",
-            formattedDate = vm.formattedDate,
+            formattedDate = formattedDate,
             isConfirmed   = ordersStatus.serverConfirmed,
             onClick       = onServerClick,
         )
 
         // ── Séparateur ────────────────────────────────────────────
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(40.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(20.dp))
 
