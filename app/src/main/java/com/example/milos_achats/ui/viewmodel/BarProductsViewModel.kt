@@ -17,19 +17,19 @@ class BarProductsViewModel(private val repository: ProductRepository) : ViewMode
         .observeCheckStates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    fun toggle(productId: String, dayIndex: Int) {
-        val key = checkKey(productId, dayIndex)
+    fun toggle(productId: String, dayIndex: Int, weekId: String) {
+        val key = checkKey(productId, dayIndex, weekId)
         viewModelScope.launch {
             repository.toggle(key, checkStates.value[key] ?: false)
         }
     }
 
-    fun confirmOrder(dayIndex: Int) {
-        viewModelScope.launch { repository.setChecked(confirmedKey(dayIndex), true) }
+    fun confirmOrder(dayIndex: Int, weekId: String) {
+        viewModelScope.launch { repository.setChecked(confirmedKey(dayIndex, weekId), true) }
     }
 
-    fun unvalidateOrder(dayIndex: Int) {
-        viewModelScope.launch { repository.setChecked(confirmedKey(dayIndex), false) }
+    fun unvalidateOrder(dayIndex: Int, weekId: String) {
+        viewModelScope.launch { repository.setChecked(confirmedKey(dayIndex, weekId), false) }
     }
 
     fun resetWeek() {

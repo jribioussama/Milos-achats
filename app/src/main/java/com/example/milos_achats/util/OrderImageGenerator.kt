@@ -1,5 +1,6 @@
 package com.example.milos_achats.util
 
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.*
@@ -9,6 +10,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import com.example.milos_achats.data.BarProduct
 import com.example.milos_achats.data.SupplierSection
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
@@ -19,11 +21,14 @@ object OrderImageGenerator {
         supplier: SupplierSection,
         products: List<BarProduct>,
         formattedDate: String,
-    ): Result<Unit> = runCatching {
-        val bitmap     = buildBitmap(supplier, products, formattedDate)
-        val datePart   = formattedDate.replace(Regex("[^\\w]"), "_").trim('_')
-        val fileName   = "bon_commande_${supplier.name.replace(Regex("[^\\w]"), "_")}_$datePart"
+    ): Result<Pair<String, ByteArray>> = runCatching {
+        val bitmap   = buildBitmap(supplier, products, formattedDate)
+        val datePart = formattedDate.replace(Regex("[^\\w]"), "_").trim('_')
+        val fileName = "bon_commande_${supplier.name.replace(Regex("[^\\w]"), "_")}_$datePart"
         saveBitmap(context, bitmap, fileName)
+        val bytes = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+        bitmap.recycle()
+        fileName to bytes
     }
 
     // ── Image builder ────────────────────────────────────────────────────────────
@@ -165,6 +170,34 @@ object OrderImageGenerator {
             result = result.dropLast(1)
         }
         return "$result…"
+    }
+
+    // ── Clear folder ────────────────────────────────────────────────────────────
+
+    fun clearFolder(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver  = context.contentResolver
+            val uri       = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            val cursor    = resolver.query(
+                uri,
+                arrayOf(MediaStore.Images.Media._ID),
+                "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?",
+                arrayOf("%Milos Achats%"),
+                null,
+            )
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val id = it.getLong(0)
+                    resolver.delete(ContentUris.withAppendedId(uri, id), null, null)
+                }
+            }
+        } else {
+            val dir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                "Milos Achats",
+            )
+            dir.listFiles()?.forEach { it.delete() }
+        }
     }
 
     // ── Save to gallery ──────────────────────────────────────────────────────────

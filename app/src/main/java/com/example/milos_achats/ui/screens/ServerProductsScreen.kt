@@ -46,13 +46,13 @@ fun ServerProductsScreen(onBack: () -> Unit) {
 
     val editableIndex = weekInfo.days.indexOfFirst { it.isEditable }
     val editableDay   = if (editableIndex >= 0) weekInfo.days[editableIndex] else null
-    val isConfirmed   = editableIndex >= 0 && checkStates[confirmedServerKey(editableIndex)] == true
+    val isConfirmed   = editableIndex >= 0 && checkStates[confirmedServerKey(editableIndex, weekInfo.weekId)] == true
     val monthName     = weekInfo.monthHeader.split(" ").first()
     val formattedDate = editableDay?.let { "${it.fullName} ${it.dayNumber} $monthName" } ?: ""
 
     val checkedCount = if (editableIndex >= 0)
         SERVER_SUPPLIERS.sumOf { s ->
-            s.products.count { checkStates[checkKey(it.id, editableIndex)] == true }
+            s.products.count { checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true }
         } else 0
 
     var showDevalidateDialog by remember { mutableStateOf(false) }
@@ -69,7 +69,7 @@ fun ServerProductsScreen(onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(
-                    onClick = { vm.unvalidateOrder(editableIndex); showDevalidateDialog = false }
+                    onClick = { vm.unvalidateOrder(editableIndex, weekInfo.weekId); showDevalidateDialog = false }
                 ) { Text("Dévalider", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
@@ -83,7 +83,8 @@ fun ServerProductsScreen(onBack: () -> Unit) {
             formattedDate = formattedDate,
             checkStates   = checkStates,
             editableIndex = editableIndex,
-            onConfirm = { vm.confirmOrder(editableIndex); showConfirmDialog = false },
+            weekId        = weekInfo.weekId,
+            onConfirm = { vm.confirmOrder(editableIndex, weekInfo.weekId); showConfirmDialog = false },
             onDismiss = { showConfirmDialog = false }
         )
     }
@@ -93,6 +94,7 @@ fun ServerProductsScreen(onBack: () -> Unit) {
             formattedDate = formattedDate,
             checkStates   = checkStates,
             editableIndex = editableIndex,
+            weekId        = weekInfo.weekId,
             isReadOnly    = true,
             onConfirm     = {},
             onDismiss     = { showOrderSummary = false }
@@ -154,7 +156,7 @@ fun ServerProductsScreen(onBack: () -> Unit) {
                             checkStates = checkStates,
                             weekInfo    = weekInfo,
                             isConfirmed = isConfirmed,
-                            onToggle    = { dayIndex -> vm.toggle(product.id, dayIndex) }
+                            onToggle    = { dayIndex -> vm.toggle(product.id, dayIndex, weekInfo.weekId) }
                         )
                         HorizontalDivider(
                             thickness = 0.5.dp,
@@ -239,12 +241,13 @@ private fun ServerConfirmDialog(
     formattedDate: String,
     checkStates: Map<String, Boolean>,
     editableIndex: Int,
+    weekId: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     isReadOnly: Boolean = false,
 ) {
     val groups = SERVER_SUPPLIERS.mapNotNull { supplier ->
-        val checked = supplier.products.filter { checkStates[checkKey(it.id, editableIndex)] == true }
+        val checked = supplier.products.filter { checkStates[checkKey(it.id, editableIndex, weekId)] == true }
         if (checked.isNotEmpty()) supplier to checked else null
     }
     Dialog(onDismissRequest = onDismiss) {
@@ -377,7 +380,7 @@ private fun ServerProductRow(
     weekInfo: WeekInfo, isConfirmed: Boolean, onToggle: (Int) -> Unit,
 ) {
     val editableIdx = weekInfo.days.indexOfFirst { it.isEditable }
-    val rowChecked  = editableIdx >= 0 && checkStates[checkKey(product.id, editableIdx)] == true
+    val rowChecked  = editableIdx >= 0 && checkStates[checkKey(product.id, editableIdx, weekInfo.weekId)] == true
     val divColor    = MaterialTheme.colorScheme.outlineVariant
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(
@@ -396,7 +399,7 @@ private fun ServerProductRow(
         SColDivider(divColor)
         Row(modifier = Modifier.horizontalScroll(hScroll)) {
             weekInfo.days.forEachIndexed { dayIndex, day ->
-                SDayCell(checkStates[checkKey(product.id, dayIndex)] == true, day.isEditable, isConfirmed, S_DAY_COL) { onToggle(dayIndex) }
+                SDayCell(checkStates[checkKey(product.id, dayIndex, weekInfo.weekId)] == true, day.isEditable, isConfirmed, S_DAY_COL) { onToggle(dayIndex) }
             }
         }
     }

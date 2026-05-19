@@ -16,4 +16,7 @@ interface CheckStateDao {
 
     @Query("DELETE FROM check_states")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM check_states WHERE key NOT LIKE :pattern")
+    suspend fun deleteNotMatchingWeek(pattern: String)
 }

@@ -15,6 +15,7 @@ data class DayInfo(
 data class WeekInfo(
     val monthHeader: String,
     val days: List<DayInfo>,
+    val weekId: String,   // date du Lundi ex: "20250519"
 )
 
 /**
@@ -75,9 +76,15 @@ fun getWeekInfo(): WeekInfo {
             isEditable = sameDay(cal, editableDate),
         )
     }
+    val weekId = "%04d%02d%02d".format(
+        monday.get(Calendar.YEAR),
+        monday.get(Calendar.MONTH) + 1,
+        monday.get(Calendar.DAY_OF_MONTH),
+    )
     return WeekInfo(
         monthHeader = monthFmt.format(monday.time).replaceFirstChar { it.uppercase() },
         days = days,
+        weekId = weekId,
     )
 }
 
@@ -107,7 +114,7 @@ val BAR_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("chariot_04", "Matcha", "ماتشا", "1"),
             BarProduct("chariot_05", "Kyufi sans sucre", "كيوفي بدون سكر", "2"),
             BarProduct("chariot_06", "Kyufi sucre", "كيوفي بالسكر", "2"),
-            BarProduct("chariot_07", "Capsules Nespresso mauve", "كبسولات نسبريسو بنفسجي", "3"),
+            BarProduct("chariot_07", "Capsules Nespresso intensité 9", "كبسولات نسبريسو 9", "3"),
             BarProduct("chariot_08", "Eau Garsi (stika)", "ماء قارصي", "2"),
             BarProduct("chariot_09", "Purée mangue monin", "بيوري مانغو", "1"),
             BarProduct("chariot_10", "Purée pêche monin", "بيوري خوخ", "1"),
@@ -120,29 +127,22 @@ val BAR_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("chariot_17", "Sirop bleu monin", "شراب أزرق", "1"),
             BarProduct("chariot_18", "Sirop mojito monin", "شراب موهيتو", "1"),
             BarProduct("chariot_19", "Sirop fruits rouges monin", "شراب فواكه حمراء", "1"),
-            BarProduct("chariot_20", "Ananas boîte monin", "أناناس معلب", "2"),
+            BarProduct("chariot_20", "Ananas boîte", "أناناس معلب", "2"),
             BarProduct("chariot_21", "Crème à fouetter avec sucre", "كريمة خفق", "3"),
             BarProduct("chariot_22", "Chocolat chaud", "شوكولاتة ساخنة", "3"),
-            BarProduct("chariot_23", "Lotus pâte", "معجون لوتس", "1"),
+            BarProduct("chariot_23", "Speculos pâte", "معجون سبيكولوس", "1"),
             BarProduct("chariot_24", "Miel STAL", "عسل", "1"),
-            BarProduct("chariot_25", "Nestlé 1/2 LITRE", "نستلي", "3"),
-            BarProduct("chariot_26", "Pistache Roxella", "فستق روكسيلا", "1"),
+            BarProduct("chariot_25", "Nestlé 1/2 LITRE", "1/2 نستلي", "3"),
             BarProduct("chariot_27", "Sirop menthe (THE)", "شراب نعناع", "2"),
-            BarProduct("chariot_28", "Biscuit Lotus grand", "بسكويت لوتس كبير", "2"),
+            BarProduct("chariot_28", "Biscuit Lotus grand", "بسكويت لوتس كبير", "1"),
             BarProduct("chariot_29", "Gants noir paquet", "علبة قفازات سوداء", "1"),
             BarProduct("chariot_30", "Ajax (bidon)", "منظف أجاكس", "1"),
             BarProduct("chariot_31", "Sacs poubelles 90/100", "أكياس قمامة", "3"),
             BarProduct("chariot_32", "Yaourt arabe", "ياغورت عربي", "2"),
-            BarProduct("chariot_33", "Orange séchée", "برتقال مجفف", "300g"),
-            BarProduct("chariot_34", "Amande concassée", "لوز مجروش", "300g"),
-            BarProduct("chariot_35", "Pistache concassée", "فستق مجروش", "300g"),
-            BarProduct("chariot_36", "Noisette pelée", "بندق مقشر", "300g"),
-            BarProduct("chariot_37", "Cajou", "كاجو", "300g"),
+            BarProduct("chariot_33", "Orange séchée", "برتقال مجفف", "200g"),
             BarProduct("chariot_38", "Jus ananas delice", "عصير أناناس", "4"),
             BarProduct("chariot_39", "Jus orange delice", "عصير برتقال", "4"),
             BarProduct("chariot_40", "Jus mangue delice", "عصير مانغو", "4"),
-            BarProduct("chariot_41", "Yaourt GRECOS", "ياغورت غريكوس", "8"),
-            BarProduct("chariot_42", "Thé vert", "شاي أخضر", "10"),
             BarProduct("chariot_43", "Carton cookies", "علبة كوكيز", "1"),
             BarProduct("chariot_44", "Carton brownies", "علبة براونيز", "1"),
             BarProduct("chariot_45", "Sucre", "سكر", "10kg"),
@@ -150,6 +150,9 @@ val BAR_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("chariot_47", "Fraise surgelée", "فراولة مجمدة", "10kg"),
             BarProduct("chariot_48", "Lait (stika)", "حليب", "2"),
             BarProduct("chariot_49", "Granola", "غرانولا", "500g"),
+            BarProduct("chariot_51", "Recharge gaz pour pistolet", "خرطوشة غاز للمسدس", "3"),
+            BarProduct("chariot_52", "Chantilly", "كريمة شانتيي", "4"),
+            BarProduct("chariot_53", "Caramel beurre salé (Gaufreat)", "كراميل مملح", "3kg"),
         )
     ),
     SupplierSection(
@@ -179,7 +182,7 @@ val BAR_SUPPLIERS: List<SupplierSection> = listOf(
         deliveryInfo = "Mohamed",
         products = listOf(
             BarProduct("khodar_01", "Banane", "موز", "2kg"),
-            BarProduct("khodar_02", "Pomme", "تفاح", "2kg"),
+            BarProduct("khodar_02", "Pommes", "تفاح", "2kg"),
             BarProduct("khodar_03", "Citron", "ليمون", "2kg"),
         )
     ),
@@ -219,9 +222,25 @@ val BAR_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("mokador_03", "Sachet café arabe", "أكياس قهوة عربية", "4"),
         )
     ),
+    SupplierSection(
+        id = "marche_food",
+        name = "Marché Food",
+        deliveryInfo = "Mohamed",
+        products = listOf(
+            BarProduct("marche_food_01", "Pistache Roxella", "فستق روكسيلا", "1"),
+        )
+    ),
+    SupplierSection(
+        id = "attar",
+        name = "عطار",
+        deliveryInfo = "Mohamed",
+        products = listOf(
+            BarProduct("attar_01", "Thé vert Libye", "شاي أخضر", "10"),
+        )
+    ),
 )
 
 const val DAY_COUNT = 7
 
-fun checkKey(productId: String, dayIndex: Int) = "${productId}_d${dayIndex}"
-fun confirmedKey(dayIndex: Int) = "CONFIRMED_d${dayIndex}"
+fun checkKey(productId: String, dayIndex: Int, weekId: String) = "${weekId}_${productId}_d${dayIndex}"
+fun confirmedKey(dayIndex: Int, weekId: String) = "${weekId}_CONFIRMED_d${dayIndex}"

@@ -17,19 +17,19 @@ class ServerProductsViewModel(private val repository: ProductRepository) : ViewM
         .observeCheckStates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    fun toggle(productId: String, dayIndex: Int) {
-        val key = checkKey(productId, dayIndex)
+    fun toggle(productId: String, dayIndex: Int, weekId: String) {
+        val key = checkKey(productId, dayIndex, weekId)
         viewModelScope.launch {
             repository.toggle(key, checkStates.value[key] ?: false)
         }
     }
 
-    fun confirmOrder(dayIndex: Int) {
-        viewModelScope.launch { repository.setChecked(confirmedServerKey(dayIndex), true) }
+    fun confirmOrder(dayIndex: Int, weekId: String) {
+        viewModelScope.launch { repository.setChecked(confirmedServerKey(dayIndex, weekId), true) }
     }
 
-    fun unvalidateOrder(dayIndex: Int) {
-        viewModelScope.launch { repository.setChecked(confirmedServerKey(dayIndex), false) }
+    fun unvalidateOrder(dayIndex: Int, weekId: String) {
+        viewModelScope.launch { repository.setChecked(confirmedServerKey(dayIndex, weekId), false) }
     }
 
     class Factory(private val repository: ProductRepository) : ViewModelProvider.Factory {

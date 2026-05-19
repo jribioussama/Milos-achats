@@ -1,7 +1,7 @@
 package com.example.milos_achats.data
 
 // Clé de confirmation cuisine — séparée de celle du bar pour coexister dans la même DB
-fun confirmedKitchenKey(dayIndex: Int) = "CONFIRMED_CUISINE_d${dayIndex}"
+fun confirmedKitchenKey(dayIndex: Int, weekId: String) = "${weekId}_CONFIRMED_CUISINE_d${dayIndex}"
 
 // Les product IDs sont préfixés "k_" pour ne pas entrer en collision avec le bar
 // Les supplier IDs (chariot, jarraya, khodar) restent identiques au bar pour pouvoir
@@ -173,6 +173,15 @@ val KITCHEN_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("k_slim_02", "Air fraîche", "معطر جو", "1 bidon"),
             BarProduct("k_slim_03", "Dinol", "منظف ديكول", "1 bidon"),
             BarProduct("k_slim_04", "Javel", "جافيل", "1 bidon"),
+        )
+    ),
+
+    SupplierSection(
+        id = "marche_food",
+        name = "Marché Food",
+        deliveryInfo = "Mohamed",
+        products = listOf(
+            BarProduct("k_marche_food_01", "Pistache Roxella", "فستق روكسيلا", "1"),
         )
     ),
 

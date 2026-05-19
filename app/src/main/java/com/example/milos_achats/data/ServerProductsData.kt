@@ -1,6 +1,6 @@
 package com.example.milos_achats.data
 
-fun confirmedServerKey(dayIndex: Int) = "CONFIRMED_SERVER_d${dayIndex}"
+fun confirmedServerKey(dayIndex: Int, weekId: String) = "${weekId}_CONFIRMED_SERVER_d${dayIndex}"
 
 // Supplier IDs identiques aux autres modules (wissem, slim, attar) pour fusion future
 // Product IDs préfixés "s_" pour éviter toute collision
@@ -37,6 +37,15 @@ val SERVER_SUPPLIERS: List<SupplierSection> = listOf(
         deliveryInfo = "Mohamed",
         products = listOf(
             BarProduct("s_attar_01", "Hakaket Ma3oun", "هاقيكة ماعون", "4"),
+        )
+    ),
+
+    SupplierSection(
+        id = "marche_food",
+        name = "Marché Food",
+        deliveryInfo = "Mohamed",
+        products = listOf(
+            BarProduct("s_marche_food_01", "Pistache Roxella", "فستق روكسيلا", "1"),
         )
     ),
 )

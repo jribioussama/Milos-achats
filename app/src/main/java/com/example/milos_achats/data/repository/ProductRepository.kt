@@ -18,4 +18,6 @@ class ProductRepository(private val dao: CheckStateDao) {
     }
 
     suspend fun resetAll() = dao.deleteAll()
+
+    suspend fun cleanupOldWeeks(weekId: String) = dao.deleteNotMatchingWeek("${weekId}_%")
 }

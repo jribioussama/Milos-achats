@@ -38,6 +38,7 @@ import com.example.milos_achats.data.getWeekInfo
 import com.example.milos_achats.ui.viewmodel.BarProductsViewModel
 import com.example.milos_achats.ui.viewmodel.KitchenProductsViewModel
 import com.example.milos_achats.ui.viewmodel.ServerProductsViewModel
+import com.example.milos_achats.util.EmailSender
 import com.example.milos_achats.util.OrderImageGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,7 +64,7 @@ fun ManagerScreen(onBack: () -> Unit) {
         if (editableIndex < 0) emptyList()
         else BAR_SUPPLIERS.mapNotNull { supplier ->
             val checked = supplier.products.filter {
-                checkStates[checkKey(it.id, editableIndex)] == true
+                checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true
             }
             if (checked.isNotEmpty()) supplier to checked else null
         }
@@ -73,7 +74,7 @@ fun ManagerScreen(onBack: () -> Unit) {
         if (editableIndex < 0) emptyList()
         else KITCHEN_SUPPLIERS.mapNotNull { supplier ->
             val checked = supplier.products.filter {
-                checkStates[checkKey(it.id, editableIndex)] == true
+                checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true
             }
             if (checked.isNotEmpty()) supplier to checked else null
         }
@@ -83,7 +84,7 @@ fun ManagerScreen(onBack: () -> Unit) {
         if (editableIndex < 0) emptyList()
         else SERVER_SUPPLIERS.mapNotNull { supplier ->
             val checked = supplier.products.filter {
-                checkStates[checkKey(it.id, editableIndex)] == true
+                checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true
             }
             if (checked.isNotEmpty()) supplier to checked else null
         }
@@ -339,21 +340,31 @@ private fun launchGeneration(
 ) {
     scope.launch {
         setLoading(true)
-        var success = 0
-        var errors  = 0
+        var genSuccess = 0
+        var genErrors  = 0
+        val attachments = mutableListOf<Pair<String, ByteArray>>()
+
         withContext(Dispatchers.IO) {
+            OrderImageGenerator.clearFolder(context)
             supplierGroups.forEach { (supplier, products) ->
                 OrderImageGenerator.generate(context, supplier, products, formattedDate)
-                    .onSuccess { success++ }
-                    .onFailure { errors++ }
+                    .onSuccess { pair -> genSuccess++; attachments += pair }
+                    .onFailure { genErrors++ }
+            }
+
+            if (attachments.isNotEmpty()) {
+                val summary = supplierGroups.map { (s, p) -> s.name to p.size }
+                EmailSender.send(
+                    attachments     = attachments,
+                    orderDate       = formattedDate,
+                    supplierSummary = summary,
+                )
             }
         }
+
         setLoading(false)
-        val message = if (errors == 0)
-            "$success bon(s) enregistré(s) dans Photos/Milos Achats"
-        else
-            "$success réussi(s), $errors erreur(s)"
-        snackbarState.showSnackbar(message)
+        val genMsg = if (genErrors == 0) "$genSuccess bon(s) enregistré(s) dans Photos/Milos Achats" else "$genSuccess réussi(s), $genErrors erreur(s)"
+        snackbarState.showSnackbar(genMsg)
     }
 }
 
