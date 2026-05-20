@@ -38,6 +38,7 @@ import com.example.milos_achats.data.getWeekInfo
 import com.example.milos_achats.ui.viewmodel.BarProductsViewModel
 import com.example.milos_achats.ui.viewmodel.KitchenProductsViewModel
 import com.example.milos_achats.ui.viewmodel.ServerProductsViewModel
+import com.example.milos_achats.util.AppLogger
 import com.example.milos_achats.util.EmailSender
 import com.example.milos_achats.util.OrderImageGenerator
 import kotlinx.coroutines.Dispatchers
@@ -207,7 +208,7 @@ fun ManagerScreen(onBack: () -> Unit) {
 
             // ── Commande consolidée ───────────────────────────────
             Button(
-                onClick  = { showMergedSummary = true },
+                onClick  = { AppLogger.log("GÉRANT", "Consultation commande complète"); showMergedSummary = true },
                 enabled  = mergedGroups.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().height(72.dp),
                 shape    = RoundedCornerShape(14.dp),
@@ -236,7 +237,7 @@ fun ManagerScreen(onBack: () -> Unit) {
 
             // ── Vérification par type ─────────────────────────────
             Button(
-                onClick  = { showSummary = true },
+                onClick  = { AppLogger.log("GÉRANT", "Consultation commande Bar"); showSummary = true },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
             ) {
@@ -244,7 +245,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick  = { showKitchenSummary = true },
+                onClick  = { AppLogger.log("GÉRANT", "Consultation commande Cuisine"); showKitchenSummary = true },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
             ) {
@@ -252,7 +253,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick  = { showServerSummary = true },
+                onClick  = { AppLogger.log("GÉRANT", "Consultation commande Serveur & Ménage"); showServerSummary = true },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
             ) {
@@ -266,7 +267,7 @@ fun ManagerScreen(onBack: () -> Unit) {
 
             // ── Zone basse : génération ───────────────────────────
             Button(
-                onClick  = { onGenerateClick() },
+                onClick  = { AppLogger.log("GÉRANT", "Bouton Générer pressé pour $formattedDate"); onGenerateClick() },
                 enabled  = mergedGroups.isNotEmpty() && !isGenerating,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
@@ -338,32 +339,46 @@ private fun launchGeneration(
     snackbarState: SnackbarHostState,
     setLoading: (Boolean) -> Unit,
 ) {
+    AppLogger.log("GÉRANT", "Génération démarrée — $formattedDate — ${supplierGroups.size} fournisseur(s), ${supplierGroups.sumOf { it.second.size }} article(s)")
     scope.launch {
         setLoading(true)
         var genSuccess = 0
         var genErrors  = 0
         val attachments = mutableListOf<Pair<String, ByteArray>>()
 
+        var emailError: String? = null
+
         withContext(Dispatchers.IO) {
             OrderImageGenerator.clearFolder(context)
             supplierGroups.forEach { (supplier, products) ->
                 OrderImageGenerator.generate(context, supplier, products, formattedDate)
                     .onSuccess { pair -> genSuccess++; attachments += pair }
-                    .onFailure { genErrors++ }
+                    .onFailure { e -> genErrors++; AppLogger.log("GÉRANT", "Erreur ${supplier.name}: ${e.message}") }
             }
 
+            AppLogger.log("GÉRANT", "Génération terminée — $genSuccess bon(s) OK, $genErrors erreur(s)")
+
             if (attachments.isNotEmpty()) {
+                val logName = "journal_${java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.FRENCH).format(java.util.Date())}.txt"
+                attachments.add(logName to AppLogger.export())
+                AppLogger.clear()
                 val summary = supplierGroups.map { (s, p) -> s.name to p.size }
                 EmailSender.send(
                     attachments     = attachments,
                     orderDate       = formattedDate,
                     supplierSummary = summary,
-                )
+                ).onFailure { e ->
+                    emailError = e.message ?: e.javaClass.simpleName
+                    AppLogger.log("GÉRANT", "Échec envoi mail: $emailError")
+                }
             }
         }
 
         setLoading(false)
-        val genMsg = if (genErrors == 0) "$genSuccess bon(s) enregistré(s) dans Photos/Milos Achats" else "$genSuccess réussi(s), $genErrors erreur(s)"
+        val genMsg = buildString {
+            append(if (genErrors == 0) "$genSuccess bon(s) enregistré(s)" else "$genSuccess réussi(s), $genErrors erreur(s)")
+            if (emailError != null) append(" — Mail non envoyé: $emailError")
+        }
         snackbarState.showSnackbar(genMsg)
     }
 }

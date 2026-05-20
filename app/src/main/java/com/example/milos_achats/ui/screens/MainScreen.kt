@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.ui.viewmodel.HomeViewModel
+import com.example.milos_achats.util.AppLogger
 
 private val StatusGreen = Color(0xFF81C784)  // vert pastel légèrement foncé sur fond bleu
 private val StatusRed   = Color(0xFFE57373)  // rouge-corail légèrement foncé sur fond bleu
@@ -39,7 +40,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
     val vm            = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
     val ordersStatus  by vm.ordersStatus.collectAsStateWithLifecycle()
     val formattedDate by vm.formattedDate.collectAsStateWithLifecycle()
-    val isConfirmed   = ordersStatus.barConfirmed
+    val managerEnabled = ordersStatus.barConfirmed && ordersStatus.kitchenConfirmed && ordersStatus.serverConfirmed
 
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput      by remember { mutableStateOf("") }
@@ -70,11 +71,13 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             confirmButton = {
                 Button(onClick = {
                     if (pinInput == "1224") {
+                        AppLogger.log("GÉRANT", "Accès Gérant autorisé")
                         showPinDialog = false
                         pinInput = ""
                         pinError = false
                         onManagerClick()
                     } else {
+                        AppLogger.log("GÉRANT", "Code PIN incorrect")
                         pinError = true
                     }
                 }) { Text("Valider") }
@@ -124,7 +127,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             label         = "Produits Bar",
             formattedDate = formattedDate,
             isConfirmed   = ordersStatus.barConfirmed,
-            onClick       = onBarClick,
+            onClick       = { AppLogger.log("NAVIGATION", "Ouverture Produits Bar"); onBarClick() },
         )
         Spacer(Modifier.height(12.dp))
         OrderCta(
@@ -132,7 +135,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             label         = "Produits Cuisine",
             formattedDate = formattedDate,
             isConfirmed   = ordersStatus.kitchenConfirmed,
-            onClick       = onKitchenClick,
+            onClick       = { AppLogger.log("NAVIGATION", "Ouverture Produits Cuisine"); onKitchenClick() },
         )
         Spacer(Modifier.height(12.dp))
         OrderCta(
@@ -140,7 +143,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             label         = "Serveur & Ménage",
             formattedDate = formattedDate,
             isConfirmed   = ordersStatus.serverConfirmed,
-            onClick       = onServerClick,
+            onClick       = { AppLogger.log("NAVIGATION", "Ouverture Serveur & Ménage"); onServerClick() },
         )
 
         // ── Séparateur ────────────────────────────────────────────
@@ -150,8 +153,8 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
 
         // ── Zone basse : gérant ───────────────────────────────────
         Button(
-            onClick  = { showPinDialog = true },
-            enabled  = isConfirmed,
+            onClick  = { AppLogger.log("NAVIGATION", "Tentative accès Gérant"); showPinDialog = true },
+            enabled  = managerEnabled,
             modifier = Modifier.fillMaxWidth().height(64.dp),
             shape    = RoundedCornerShape(16.dp),
             colors   = ButtonDefaults.buttonColors(
@@ -167,8 +170,8 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            text  = if (isConfirmed) "Commande validée — accès disponible"
-                    else "Disponible après validation de la commande",
+            text  = if (managerEnabled) "Toutes les commandes validées — accès disponible"
+                    else "Disponible après validation des 3 commandes (Bar, Cuisine, Serveur)",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         )

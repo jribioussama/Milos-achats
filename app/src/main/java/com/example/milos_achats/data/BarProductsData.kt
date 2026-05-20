@@ -31,7 +31,7 @@ fun getWeekInfo(): WeekInfo {
     // Si l'heure est avant 02:00, on est encore dans la fenêtre du jour précédent.
     val orderingDay = Calendar.getInstance().apply {
         timeInMillis = now.timeInMillis
-        if (now.get(Calendar.HOUR_OF_DAY) < 2) add(Calendar.DAY_OF_MONTH, -1)
+        if (now.get(Calendar.HOUR_OF_DAY) < 4) add(Calendar.DAY_OF_MONTH, -1)
     }
     // J+1 = lendemain du jour de commande
     val editableDate = Calendar.getInstance().apply {
@@ -47,7 +47,7 @@ fun getWeekInfo(): WeekInfo {
     val monday = Calendar.getInstance().apply {
         timeInMillis = now.timeInMillis
         // Si avant 02:00, la semaine courante est celle du jour précédent
-        if (now.get(Calendar.HOUR_OF_DAY) < 2) add(Calendar.DAY_OF_MONTH, -1)
+        if (now.get(Calendar.HOUR_OF_DAY) < 4) add(Calendar.DAY_OF_MONTH, -1)
         // Rewind to Monday of that day
         val dow = get(Calendar.DAY_OF_WEEK)
         val back = when (dow) { Calendar.SUNDAY -> 6; else -> dow - Calendar.MONDAY }

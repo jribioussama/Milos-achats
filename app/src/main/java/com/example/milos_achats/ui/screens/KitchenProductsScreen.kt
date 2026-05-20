@@ -2,21 +2,31 @@ package com.example.milos_achats.ui.screens
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -28,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.data.*
 import com.example.milos_achats.ui.viewmodel.KitchenProductsViewModel
+import com.example.milos_achats.util.AppLogger
 
 private val K_NAME_COL = 160.dp
 private val K_QTY_COL  = 52.dp
@@ -59,6 +70,51 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
     var showConfirmDialog    by remember { mutableStateOf(false) }
     var showOrderSummary     by remember { mutableStateOf(false) }
 
+    // ── Recherche ──────────────────────────────────────────────────────────────
+    var searchOpen      by remember { mutableStateOf(false) }
+    var searchQuery     by remember { mutableStateOf("") }
+    var currentMatchIdx by remember { mutableStateOf(0) }
+    val listState       = rememberLazyListState()
+    val focusRequester  = remember { FocusRequester() }
+
+    val flatItemIndices: Map<String, Int> = remember {
+        buildMap {
+            var idx = 0
+            KITCHEN_SUPPLIERS.forEach { supplier ->
+                idx++
+                supplier.products.forEachIndexed { j, p -> put(p.id, idx + j) }
+                idx += supplier.products.size
+            }
+        }
+    }
+    val matches = remember(searchQuery) {
+        if (searchQuery.isBlank()) emptyList()
+        else KITCHEN_SUPPLIERS.flatMap { it.products }
+            .filter { it.nameFr.contains(searchQuery, ignoreCase = true) || it.nameAr.contains(searchQuery, ignoreCase = true) }
+            .mapNotNull { p -> flatItemIndices[p.id]?.let { i -> i to p } }
+    }
+    val safeMatchIdx   = if (matches.isEmpty()) 0 else currentMatchIdx.coerceIn(0, matches.size - 1)
+    val currentMatchId = matches.getOrNull(safeMatchIdx)?.second?.id
+
+    LaunchedEffect(searchQuery) {
+        currentMatchIdx = 0
+        if (searchQuery.isNotBlank()) AppLogger.log("RECHERCHE_CUISINE", "\"$searchQuery\" → ${matches.size} résultat(s)")
+    }
+    LaunchedEffect(currentMatchId) {
+        currentMatchId?.let { id -> flatItemIndices[id]?.let { listState.animateScrollToItem(it) } }
+    }
+    LaunchedEffect(searchOpen) {
+        if (searchOpen) {
+            AppLogger.log("RECHERCHE_CUISINE", "Recherche ouverte")
+            focusRequester.requestFocus()
+        } else {
+            if (searchQuery.isNotBlank()) AppLogger.log("RECHERCHE_CUISINE", "Recherche fermée — requête: \"$searchQuery\"")
+            else AppLogger.log("RECHERCHE_CUISINE", "Recherche fermée")
+            searchQuery = ""
+            currentMatchIdx = 0
+        }
+    }
+
     if (showDevalidateDialog && editableDay != null) {
         AlertDialog(
             onDismissRequest = { showDevalidateDialog = false },
@@ -69,7 +125,11 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(
-                    onClick = { vm.unvalidateOrder(editableIndex, weekInfo.weekId); showDevalidateDialog = false }
+                    onClick = {
+                        AppLogger.log("CUISINE", "Dévalidation commande $formattedDate")
+                        vm.unvalidateOrder(editableIndex, weekInfo.weekId)
+                        showDevalidateDialog = false
+                    }
                 ) { Text("Dévalider", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
@@ -85,6 +145,7 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
             editableIndex = editableIndex,
             weekId        = weekInfo.weekId,
             onConfirm = {
+                AppLogger.log("CUISINE", "Confirmation commande $formattedDate — $checkedCount article(s)")
                 vm.confirmOrder(editableIndex, weekInfo.weekId)
                 showConfirmDialog = false
             },
@@ -107,20 +168,61 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Produits Cuisine", fontWeight = FontWeight.Bold) },
+                title = {
+                    if (searchOpen) {
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                            singleLine = true,
+                            textStyle = TextStyle(color = Color.White, fontSize = 17.sp),
+                            decorationBox = { inner ->
+                                if (searchQuery.isEmpty()) Text("Rechercher un produit…", color = Color.White.copy(alpha = 0.55f), fontSize = 17.sp)
+                                inner()
+                            }
+                        )
+                    } else {
+                        Text("Produits Cuisine", fontWeight = FontWeight.Bold)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 },
                 actions = {
-                    if (isConfirmed) {
-                        TextButton(
-                            onClick = { showDevalidateDialog = true },
-                            colors  = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                        ) { Text("Dévalider") }
+                    if (searchOpen) {
+                        if (matches.isNotEmpty()) {
+                            Text("${safeMatchIdx + 1}/${matches.size}", color = Color.White, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 2.dp))
+                            IconButton(onClick = {
+                                val i = if (safeMatchIdx > 0) safeMatchIdx - 1 else matches.size - 1
+                                currentMatchIdx = i
+                                AppLogger.log("RECHERCHE_CUISINE", "← résultat ${i + 1}/${matches.size}: ${matches.getOrNull(i)?.second?.nameFr ?: ""}")
+                            }, enabled = matches.size > 1) {
+                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Précédent", tint = Color.White)
+                            }
+                            IconButton(onClick = {
+                                val i = if (safeMatchIdx < matches.size - 1) safeMatchIdx + 1 else 0
+                                currentMatchIdx = i
+                                AppLogger.log("RECHERCHE_CUISINE", "→ résultat ${i + 1}/${matches.size}: ${matches.getOrNull(i)?.second?.nameFr ?: ""}")
+                            }, enabled = matches.size > 1) {
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Suivant", tint = Color.White)
+                            }
+                        } else if (searchQuery.isNotBlank()) {
+                            Text("0 résultat", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 4.dp))
+                        }
+                        IconButton(onClick = { searchOpen = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Fermer", tint = Color.White)
+                        }
+                    } else {
+                        if (isConfirmed) {
+                            TextButton(onClick = { showDevalidateDialog = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary)) {
+                                Text("Dévalider")
+                            }
+                        }
+                        IconButton(onClick = { searchOpen = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "Rechercher", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -147,19 +249,28 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
         Column(modifier = Modifier.padding(padding)) {
             KitchenTableHeader(hScroll = hScroll, weekInfo = weekInfo, isConfirmed = isConfirmed)
             HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.primary)
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
                 KITCHEN_SUPPLIERS.forEach { supplier ->
                     item(key = "k_header_${supplier.id}") {
                         KitchenSupplierHeader(supplier = supplier, hScroll = hScroll)
                     }
                     items(items = supplier.products, key = { it.id }) { product ->
                         KitchenProductRow(
-                            product     = product,
-                            hScroll     = hScroll,
-                            checkStates = checkStates,
-                            weekInfo    = weekInfo,
-                            isConfirmed = isConfirmed,
-                            onToggle    = { dayIndex -> vm.toggle(product.id, dayIndex, weekInfo.weekId) }
+                            product        = product,
+                            hScroll        = hScroll,
+                            checkStates    = checkStates,
+                            weekInfo       = weekInfo,
+                            isConfirmed    = isConfirmed,
+                            isCurrentMatch = product.id == currentMatchId,
+                            onToggle       = { dayIndex ->
+                                val checked = checkStates[checkKey(product.id, dayIndex, weekInfo.weekId)] != true
+                                AppLogger.log("CUISINE", "${if (checked) "✓" else "✗"} ${product.nameFr} — ${weekInfo.days[dayIndex].name}")
+                                vm.toggle(product.id, dayIndex, weekInfo.weekId)
+                            },
+                            onCloseSearch  = {
+                                AppLogger.log("RECHERCHE_CUISINE", "Sélection: ${product.nameFr}")
+                                searchOpen = false
+                            }
                         )
                         HorizontalDivider(
                             thickness = 0.5.dp,
@@ -224,7 +335,7 @@ private fun KitchenConfirmCta(
             } else {
                 Button(
                     onClick  = onClick,
-                    enabled  = checkedCount > 0,
+                    enabled  = true,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape    = RoundedCornerShape(12.dp),
                     colors   = ButtonDefaults.buttonColors(
@@ -458,11 +569,14 @@ private fun KitchenProductRow(
     checkStates: Map<String, Boolean>,
     weekInfo: WeekInfo,
     isConfirmed: Boolean,
+    isCurrentMatch: Boolean,
     onToggle: (dayIndex: Int) -> Unit,
+    onCloseSearch: () -> Unit,
 ) {
     val editableIdx = weekInfo.days.indexOfFirst { it.isEditable }
     val rowChecked  = editableIdx >= 0 && checkStates[checkKey(product.id, editableIdx, weekInfo.weekId)] == true
     val divColor    = MaterialTheme.colorScheme.outlineVariant
+    val wrappedToggle = { dayIndex: Int -> if (isCurrentMatch) onCloseSearch(); onToggle(dayIndex) }
 
     Row(
         modifier = Modifier
@@ -470,11 +584,13 @@ private fun KitchenProductRow(
             .height(IntrinsicSize.Min)
             .background(
                 when {
+                    isCurrentMatch            -> Color(0xFFFFEE58).copy(alpha = 0.45f)
                     rowChecked && isConfirmed -> KGreenBg.copy(alpha = 0.07f)
                     rowChecked               -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
                     else                     -> Color.Transparent
                 }
-            ),
+            )
+            .then(if (isCurrentMatch) Modifier.clickable { onCloseSearch() } else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -518,7 +634,7 @@ private fun KitchenProductRow(
                     isEditable  = day.isEditable,
                     isConfirmed = isConfirmed,
                     width       = K_DAY_COL,
-                    onToggle    = { onToggle(dayIndex) }
+                    onToggle    = { wrappedToggle(dayIndex) }
                 )
             }
         }
