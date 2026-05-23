@@ -48,4 +48,13 @@ val SERVER_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("s_marche_food_01", "Pistache Roxella", "فستق روكسيلا", "1"),
         )
     ),
+
+    SupplierSection(
+        id = "banque",
+        name = "Banque",
+        deliveryInfo = "Mohamed",
+        products = listOf(
+            BarProduct("s_banque_01", "Rouleaux TPE", "لفافات TPE", "1"),
+        )
+    ),
 )

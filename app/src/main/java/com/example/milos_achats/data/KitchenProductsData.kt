@@ -197,7 +197,7 @@ val KITCHEN_SUPPLIERS: List<SupplierSection> = listOf(
             BarProduct("k_rais_05", "Brochettes moyenne taille", "أسياخ", "6"),
             BarProduct("k_rais_06", "Sachet congélation", "أكياس تجميد", "2"),
             BarProduct("k_rais_07", "Chocolat noir couverture Said", "شوكولاتة سوداء", "2"),
-            BarProduct("k_rais_08", "Chocolat 72% Said", "شوكولاتة 72%", "2"),
+            BarProduct("k_rais_08", "Chocolat Said", "شوكولاتة", "2"),
             BarProduct("k_rais_09", "Papier salefin grand", "ورق سالفين كبير", "1"),
             BarProduct("k_rais_10", "Papier alu grand", "ورق ألومنيوم كبير", "1"),
             BarProduct("k_rais_11", "Chocolat blanc drops", "قطرات شوكولاتة بيضاء", "2.5kg"),
