@@ -46,12 +46,23 @@ fun getWeekInfo(): WeekInfo {
     }
     val monday = Calendar.getInstance().apply {
         timeInMillis = now.timeInMillis
-        // Si avant 02:00, la semaine courante est celle du jour précédent
+        // Si avant 04:00, la semaine courante est celle du jour précédent
         if (now.get(Calendar.HOUR_OF_DAY) < 4) add(Calendar.DAY_OF_MONTH, -1)
         // Rewind to Monday of that day
         val dow = get(Calendar.DAY_OF_WEEK)
         val back = when (dow) { Calendar.SUNDAY -> 6; else -> dow - Calendar.MONDAY }
         add(Calendar.DAY_OF_MONTH, -back)
+    }
+
+    // Cas liminal : Dimanche >= 04h → editableDate tombe le lundi de la semaine suivante,
+    // qui est hors de la semaine affichée (Lun→Dim). On avance d'une semaine pour que
+    // le jour éditable reste visible.
+    val weekSunday = Calendar.getInstance().apply {
+        timeInMillis = monday.timeInMillis
+        add(Calendar.DAY_OF_MONTH, 6)
+    }
+    if (editableDate.after(weekSunday)) {
+        monday.add(Calendar.DAY_OF_MONTH, 7)
     }
 
     val names     = listOf("Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim")
