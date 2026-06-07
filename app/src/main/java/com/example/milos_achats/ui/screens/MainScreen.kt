@@ -1,6 +1,7 @@
 package com.example.milos_achats.ui.screens
 
 import android.Manifest
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -92,7 +93,10 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             title = { Text("Prêt à installer", fontWeight = FontWeight.Bold) },
             text  = { Text("La mise à jour a été téléchargée. Appuyez sur Installer pour lancer l'installation.") },
             confirmButton = {
-                Button(onClick = { AppUpdater.installNow(context) }) {
+                Button(onClick = {
+                    AppUpdater.installNow(context)
+                    (context as? Activity)?.moveTaskToBack(true)
+                }) {
                     Text("Installer")
                 }
             },
