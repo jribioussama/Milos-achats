@@ -8,6 +8,7 @@ import com.example.milos_achats.data.checkKey
 import com.example.milos_achats.data.confirmedServerKey
 import com.example.milos_achats.data.repository.CatalogRepository
 import com.example.milos_achats.data.repository.ProductRepository
+import com.example.milos_achats.util.AppLogger
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -40,7 +41,10 @@ class ServerProductsViewModel(
     }
 
     fun syncIfNeeded() {
-        viewModelScope.launch { catalog.syncCategoryIfNeeded("server") }
+        viewModelScope.launch {
+            catalog.syncCategoryIfNeeded("server")
+                .onFailure { e -> AppLogger.log("SERVER", "Sync échouée: ${e::class.simpleName}: ${e.message}") }
+        }
     }
 
     class Factory(

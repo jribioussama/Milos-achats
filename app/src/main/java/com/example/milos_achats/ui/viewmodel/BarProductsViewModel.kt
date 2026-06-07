@@ -8,6 +8,7 @@ import com.example.milos_achats.data.checkKey
 import com.example.milos_achats.data.confirmedKey
 import com.example.milos_achats.data.repository.CatalogRepository
 import com.example.milos_achats.data.repository.ProductRepository
+import com.example.milos_achats.util.AppLogger
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -40,7 +41,10 @@ class BarProductsViewModel(
     }
 
     fun syncIfNeeded() {
-        viewModelScope.launch { catalog.syncCategoryIfNeeded("bar") }
+        viewModelScope.launch {
+            catalog.syncCategoryIfNeeded("bar")
+                .onFailure { e -> AppLogger.log("BAR", "Sync échouée: ${e::class.simpleName}: ${e.message}") }
+        }
     }
 
     fun resetWeek() {

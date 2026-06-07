@@ -378,6 +378,45 @@ fun ManagerScreen(
             ) {
                 Text("🫧  Gérer le catalogue Serveur & Ménage", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
+
+            // ── Envoi des logs ────────────────────────────────────
+            Spacer(Modifier.height(40.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text       = "Support",
+                style      = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            var isSendingLogs by remember { mutableStateOf(false) }
+            OutlinedButton(
+                onClick  = {
+                    AppLogger.log("SUPPORT", "Envoi logs demandé")
+                    isSendingLogs = true
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { EmailSender.sendLogs() }
+                        isSendingLogs = false
+                        snackbarState.showSnackbar(
+                            if (result.isSuccess) "Logs envoyés avec succès"
+                            else "Échec envoi : ${result.exceptionOrNull()?.message}"
+                        )
+                    }
+                },
+                enabled  = !isSendingLogs,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(14.dp),
+            ) {
+                if (isSendingLogs) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Envoi en cours…", fontSize = 15.sp)
+                } else {
+                    Text("📤  Envoyer les logs", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
             Spacer(Modifier.height(24.dp))
         }
     }
