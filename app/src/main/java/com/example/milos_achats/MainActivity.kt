@@ -20,11 +20,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var installerLaunched = false
+
     override fun onResume() {
         super.onResume()
-        if (AppUpdater.hasPendingInstall(this)) {
+        if (!installerLaunched && AppUpdater.hasPendingInstall(this)) {
+            installerLaunched = true
             AppUpdater.installPending(this)
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        installerLaunched = false
     }
 
     override fun onNewIntent(intent: Intent) {
