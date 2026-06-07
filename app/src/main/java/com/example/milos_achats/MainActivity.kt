@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(Intent.EXTRA_INTENT)
                 }
-                confirmIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // Pas de FLAG_ACTIVITY_NEW_TASK — appelé depuis une Activity foreground
                 confirmIntent?.let { startActivity(it) }
                 AppLogger.log("UPDATE", "Dialog confirmation lancé")
             }
