@@ -1,10 +1,10 @@
 package com.example.milos_achats.ui.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+// import android.Manifest               // [AUTO-UPDATE]
+// import android.content.pm.PackageManager  // [AUTO-UPDATE]
+// import android.os.Build               // [AUTO-UPDATE]
+// import androidx.activity.compose.rememberLauncherForActivityResult  // [AUTO-UPDATE]
+// import androidx.activity.result.contract.ActivityResultContracts    // [AUTO-UPDATE]
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -30,14 +30,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
+// import androidx.core.content.ContextCompat  // [AUTO-UPDATE]
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.ui.viewmodel.HomeViewModel
 import com.example.milos_achats.BuildConfig
 import com.example.milos_achats.util.AppLogger
-import com.example.milos_achats.util.AppUpdater
+// import com.example.milos_achats.util.AppUpdater  // [AUTO-UPDATE]
 import com.example.milos_achats.util.UpdateInfo
 
 private val StatusGreen = Color(0xFF81C784)  // vert pastel légèrement foncé sur fond bleu
@@ -52,58 +52,44 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
     val formattedDate by vm.formattedDate.collectAsStateWithLifecycle()
     val managerEnabled = ordersStatus.barConfirmed && ordersStatus.kitchenConfirmed && ordersStatus.serverConfirmed
 
-    // ── Permission notifications (Android 13+) ───────────────────
+    // ── [AUTO-UPDATE DÉSACTIVÉ] ───────────────────────────────────
+    // Décommenter pour réactiver la vérification et l'installation de mises à jour
+    /*
     val notifPermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* résultat ignoré — on essaie quand même la notif */ }
-
-    // ── Vérification de mise à jour au démarrage ──────────────────
+    ) { }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     val installReady by AppUpdater.installReady.collectAsStateWithLifecycle()
-
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
-        ) {
-            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        ) { notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
         updateInfo = AppUpdater.checkForUpdate(context)
     }
-
     updateInfo?.let { info ->
         UpdateDialog(
             info      = info,
             onDismiss = { updateInfo = null },
             onUpdate  = {
                 updateInfo = null
-                if (AppUpdater.canInstall(context)) {
-                    AppUpdater.downloadAndInstall(context, info.apkUrl)
-                } else {
-                    AppUpdater.openInstallSettings(context)
-                }
+                if (AppUpdater.canInstall(context)) AppUpdater.downloadAndInstall(context, info.apkUrl)
+                else AppUpdater.openInstallSettings(context)
             },
         )
     }
-
     if (installReady) {
         AlertDialog(
             onDismissRequest = { AppUpdater.dismissInstallReady() },
             title = { Text("Prêt à installer", fontWeight = FontWeight.Bold) },
             text  = { Text("La mise à jour a été téléchargée. Appuyez sur Installer pour lancer l'installation.") },
-            confirmButton = {
-                Button(onClick = { AppUpdater.installNow(context) }) {
-                    Text("Installer")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { AppUpdater.dismissInstallReady() }) {
-                    Text("Plus tard")
-                }
-            },
+            confirmButton = { Button(onClick = { AppUpdater.installNow(context) }) { Text("Installer") } },
+            dismissButton = { TextButton(onClick = { AppUpdater.dismissInstallReady() }) { Text("Plus tard") } },
             shape = RoundedCornerShape(16.dp),
         )
     }
+    */
+    // ─────────────────────────────────────────────────────────────
 
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput      by remember { mutableStateOf("") }

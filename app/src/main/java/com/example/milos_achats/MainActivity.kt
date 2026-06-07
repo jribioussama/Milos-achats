@@ -7,7 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.milos_achats.navigation.AppNavigation
 import com.example.milos_achats.ui.theme.MilosachatsTheme
-import com.example.milos_achats.util.AppUpdater
+// import com.example.milos_achats.util.AppUpdater  // [AUTO-UPDATE]
 
 class MainActivity : ComponentActivity() {
 
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        AppUpdater.checkPendingInstall(this)
+        // AppUpdater.checkPendingInstall(this)  // [AUTO-UPDATE]
     }
 
     override fun onNewIntent(intent: Intent) {
