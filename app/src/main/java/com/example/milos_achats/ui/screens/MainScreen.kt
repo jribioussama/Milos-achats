@@ -59,6 +59,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
 
     // ── Vérification de mise à jour au démarrage ──────────────────
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    val installReady by AppUpdater.installReady.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -79,10 +80,28 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
                 if (AppUpdater.canInstall(context)) {
                     AppUpdater.downloadAndInstall(context, info.apkUrl)
                 } else {
-                    // Ouvre les paramètres pour activer "Installer des apps inconnues"
                     AppUpdater.openInstallSettings(context)
                 }
             },
+        )
+    }
+
+    if (installReady) {
+        AlertDialog(
+            onDismissRequest = { AppUpdater.dismissInstallReady() },
+            title = { Text("Prêt à installer", fontWeight = FontWeight.Bold) },
+            text  = { Text("La mise à jour a été téléchargée. Appuyez sur Installer pour lancer l'installation.") },
+            confirmButton = {
+                Button(onClick = { AppUpdater.installNow(context) }) {
+                    Text("Installer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { AppUpdater.dismissInstallReady() }) {
+                    Text("Plus tard")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
         )
     }
 
