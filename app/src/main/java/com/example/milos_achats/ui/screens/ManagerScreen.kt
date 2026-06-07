@@ -28,14 +28,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
-import com.example.milos_achats.data.BAR_SUPPLIERS
 import com.example.milos_achats.data.BarProduct
-import com.example.milos_achats.data.KITCHEN_SUPPLIERS
-import com.example.milos_achats.data.SERVER_SUPPLIERS
 import com.example.milos_achats.data.SupplierSection
 import com.example.milos_achats.data.checkKey
 import com.example.milos_achats.data.getWeekInfo
 import com.example.milos_achats.ui.viewmodel.BarProductsViewModel
+import com.example.milos_achats.ui.viewmodel.HomeViewModel
 import com.example.milos_achats.ui.viewmodel.KitchenProductsViewModel
 import com.example.milos_achats.ui.viewmodel.ServerProductsViewModel
 import com.example.milos_achats.util.AppLogger
@@ -47,13 +45,24 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManagerScreen(onBack: () -> Unit) {
+fun ManagerScreen(
+    onBack: () -> Unit,
+    onAdminBarClick: () -> Unit = {},
+    onAdminKitchenClick: () -> Unit = {},
+    onAdminServerClick: () -> Unit = {},
+) {
     val context = LocalContext.current
     val app     = context.applicationContext as MilosApp
-    val vm: BarProductsViewModel      = viewModel(factory = BarProductsViewModel.Factory(app.repository))
-    val kvM: KitchenProductsViewModel = viewModel(factory = KitchenProductsViewModel.Factory(app.repository))
-    val svM: ServerProductsViewModel  = viewModel(factory = ServerProductsViewModel.Factory(app.repository))
-    val checkStates by vm.checkStates.collectAsStateWithLifecycle()
+    val vm: BarProductsViewModel      = viewModel(factory = BarProductsViewModel.Factory(app.repository, app.catalogRepository))
+    val kvM: KitchenProductsViewModel = viewModel(factory = KitchenProductsViewModel.Factory(app.repository, app.catalogRepository))
+    val svM: ServerProductsViewModel  = viewModel(factory = ServerProductsViewModel.Factory(app.repository, app.catalogRepository))
+    val homeVm: HomeViewModel         = viewModel(factory = HomeViewModel.Factory(app.repository))
+    val ordersStatus by homeVm.ordersStatus.collectAsStateWithLifecycle()
+    val ordersReady  = ordersStatus.barConfirmed && ordersStatus.kitchenConfirmed && ordersStatus.serverConfirmed
+    val checkStates  by vm.checkStates.collectAsStateWithLifecycle()
+    val barSuppliers by vm.suppliers.collectAsStateWithLifecycle()
+    val kitSuppliers by kvM.suppliers.collectAsStateWithLifecycle()
+    val srvSuppliers by svM.suppliers.collectAsStateWithLifecycle()
     val weekInfo = remember { getWeekInfo() }
 
     val editableIndex = weekInfo.days.indexOfFirst { it.isEditable }
@@ -61,9 +70,9 @@ fun ManagerScreen(onBack: () -> Unit) {
     val monthName     = weekInfo.monthHeader.split(" ").first()
     val formattedDate = editableDay?.let { "${it.fullName} ${it.dayNumber} $monthName" } ?: ""
 
-    val supplierGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(checkStates, editableIndex) {
+    val supplierGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(checkStates, editableIndex, barSuppliers) {
         if (editableIndex < 0) emptyList()
-        else BAR_SUPPLIERS.mapNotNull { supplier ->
+        else barSuppliers.mapNotNull { supplier ->
             val checked = supplier.products.filter {
                 checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true
             }
@@ -71,9 +80,9 @@ fun ManagerScreen(onBack: () -> Unit) {
         }
     }
 
-    val kitchenGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(checkStates, editableIndex) {
+    val kitchenGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(checkStates, editableIndex, kitSuppliers) {
         if (editableIndex < 0) emptyList()
-        else KITCHEN_SUPPLIERS.mapNotNull { supplier ->
+        else kitSuppliers.mapNotNull { supplier ->
             val checked = supplier.products.filter {
                 checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true
             }
@@ -81,9 +90,9 @@ fun ManagerScreen(onBack: () -> Unit) {
         }
     }
 
-    val serverGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(checkStates, editableIndex) {
+    val serverGroups: List<Pair<SupplierSection, List<BarProduct>>> = remember(checkStates, editableIndex, srvSuppliers) {
         if (editableIndex < 0) emptyList()
-        else SERVER_SUPPLIERS.mapNotNull { supplier ->
+        else srvSuppliers.mapNotNull { supplier ->
             val checked = supplier.products.filter {
                 checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true
             }
@@ -206,10 +215,43 @@ fun ManagerScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(32.dp))
 
+            // ── Statut des commandes ──────────────────────────────
+            if (!ordersReady) {
+                Surface(
+                    shape  = RoundedCornerShape(12.dp),
+                    color  = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(
+                            "Commandes en attente",
+                            fontWeight = FontWeight.SemiBold,
+                            color      = MaterialTheme.colorScheme.onErrorContainer,
+                            fontSize   = 13.sp,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        listOf(
+                            "🍹 Bar"             to ordersStatus.barConfirmed,
+                            "🍳 Cuisine"         to ordersStatus.kitchenConfirmed,
+                            "🫧 Serveur & Ménage" to ordersStatus.serverConfirmed,
+                        ).forEach { (label, done) ->
+                            Text(
+                                text  = if (done) "✓  $label" else "○  $label",
+                                fontSize = 12.sp,
+                                color    = MaterialTheme.colorScheme.onErrorContainer.copy(
+                                    alpha = if (done) 0.5f else 1f
+                                ),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+            }
+
             // ── Commande consolidée ───────────────────────────────
             Button(
                 onClick  = { AppLogger.log("GÉRANT", "Consultation commande complète"); showMergedSummary = true },
-                enabled  = mergedGroups.isNotEmpty(),
+                enabled  = ordersReady && mergedGroups.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().height(72.dp),
                 shape    = RoundedCornerShape(14.dp),
                 colors   = ButtonDefaults.buttonColors(
@@ -219,7 +261,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("📦  Toute la commande", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    if (mergedGroups.isNotEmpty()) {
+                    if (ordersReady && mergedGroups.isNotEmpty()) {
                         Text(
                             text     = "${mergedGroups.size} fournisseur(s) · ${mergedGroups.sumOf { it.second.size }} article(s)",
                             fontSize = 12.sp,
@@ -238,6 +280,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             // ── Vérification par type ─────────────────────────────
             Button(
                 onClick  = { AppLogger.log("GÉRANT", "Consultation commande Bar"); showSummary = true },
+                enabled  = ordersStatus.barConfirmed,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
             ) {
@@ -246,6 +289,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick  = { AppLogger.log("GÉRANT", "Consultation commande Cuisine"); showKitchenSummary = true },
+                enabled  = ordersStatus.kitchenConfirmed,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
             ) {
@@ -254,6 +298,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick  = { AppLogger.log("GÉRANT", "Consultation commande Serveur & Ménage"); showServerSummary = true },
+                enabled  = ordersStatus.serverConfirmed,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
             ) {
@@ -268,7 +313,7 @@ fun ManagerScreen(onBack: () -> Unit) {
             // ── Zone basse : génération ───────────────────────────
             Button(
                 onClick  = { AppLogger.log("GÉRANT", "Bouton Générer pressé pour $formattedDate"); onGenerateClick() },
-                enabled  = mergedGroups.isNotEmpty() && !isGenerating,
+                enabled  = ordersReady && mergedGroups.isNotEmpty() && !isGenerating,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 shape    = RoundedCornerShape(14.dp),
                 colors   = ButtonDefaults.buttonColors(
@@ -290,13 +335,49 @@ fun ManagerScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text  = if (mergedGroups.isNotEmpty())
-                            "${mergedGroups.size} fournisseur(s) — ${mergedGroups.sumOf { it.second.size }} article(s)"
-                        else
-                            "Aucune commande validée",
+                text  = when {
+                    !ordersReady             -> "En attente de validation des 3 commandes"
+                    mergedGroups.isNotEmpty() -> "${mergedGroups.size} fournisseur(s) — ${mergedGroups.sumOf { it.second.size }} article(s)"
+                    else                     -> "Aucun article sélectionné"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             )
+
+            // ── Gestion du catalogue ──────────────────────────────
+            Spacer(Modifier.height(40.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text       = "Gestion du catalogue",
+                style      = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick  = onAdminBarClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(14.dp),
+            ) {
+                Text("🍹  Gérer le catalogue Bar", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick  = onAdminKitchenClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(14.dp),
+            ) {
+                Text("🍳  Gérer le catalogue Cuisine", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick  = onAdminServerClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(14.dp),
+            ) {
+                Text("🫧  Gérer le catalogue Serveur & Ménage", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
             Spacer(Modifier.height(24.dp))
         }
     }

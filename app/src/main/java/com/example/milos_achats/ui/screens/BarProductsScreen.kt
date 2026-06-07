@@ -36,7 +36,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
-import com.example.milos_achats.data.BAR_SUPPLIERS
 import com.example.milos_achats.data.BarProduct
 import com.example.milos_achats.data.DAY_COUNT
 import com.example.milos_achats.data.DayInfo
@@ -59,8 +58,9 @@ private val GreenBg        = Color(0xFF4CAF50)
 @Composable
 fun BarProductsScreen(onBack: () -> Unit) {
     val app = LocalContext.current.applicationContext as MilosApp
-    val vm: BarProductsViewModel = viewModel(factory = BarProductsViewModel.Factory(app.repository))
+    val vm: BarProductsViewModel = viewModel(factory = BarProductsViewModel.Factory(app.repository, app.catalogRepository))
     val checkStates by vm.checkStates.collectAsStateWithLifecycle()
+    val suppliers   by vm.suppliers.collectAsStateWithLifecycle()
     val weekInfo = remember { getWeekInfo() }
 
     // ── Dérivés utiles ─────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ fun BarProductsScreen(onBack: () -> Unit) {
     val formattedDate  = editableDay?.let { "${it.fullName} ${it.dayNumber} $monthName" } ?: ""
 
     val checkedCount = if (editableIndex >= 0)
-        BAR_SUPPLIERS.sumOf { s ->
+        suppliers.sumOf { s ->
             s.products.count { checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true }
         } else 0
 
@@ -87,24 +87,26 @@ fun BarProductsScreen(onBack: () -> Unit) {
     val listState       = rememberLazyListState()
     val focusRequester  = remember { FocusRequester() }
 
-    val flatItemIndices: Map<String, Int> = remember {
+    val flatItemIndices: Map<String, Int> = remember(suppliers) {
         buildMap {
             var idx = 0
-            BAR_SUPPLIERS.forEach { supplier ->
+            suppliers.forEach { supplier ->
                 idx++
                 supplier.products.forEachIndexed { j, p -> put(p.id, idx + j) }
                 idx += supplier.products.size
             }
         }
     }
-    val matches = remember(searchQuery) {
+    val matches = remember(searchQuery, suppliers) {
         if (searchQuery.isBlank()) emptyList()
-        else BAR_SUPPLIERS.flatMap { it.products }
+        else suppliers.flatMap { it.products }
             .filter { it.nameFr.contains(searchQuery, ignoreCase = true) || it.nameAr.contains(searchQuery, ignoreCase = true) }
             .mapNotNull { p -> flatItemIndices[p.id]?.let { i -> i to p } }
     }
     val safeMatchIdx       = if (matches.isEmpty()) 0 else currentMatchIdx.coerceIn(0, matches.size - 1)
     val currentMatchId     = matches.getOrNull(safeMatchIdx)?.second?.id
+
+    LaunchedEffect(Unit) { vm.syncIfNeeded() }
 
     LaunchedEffect(searchQuery) {
         currentMatchIdx = 0
@@ -153,6 +155,7 @@ fun BarProductsScreen(onBack: () -> Unit) {
     if (showConfirmDialog && editableIndex >= 0) {
         OrderConfirmDialog(
             formattedDate = formattedDate,
+            suppliers     = suppliers,
             checkStates   = checkStates,
             editableIndex = editableIndex,
             weekId        = weekInfo.weekId,
@@ -169,6 +172,7 @@ fun BarProductsScreen(onBack: () -> Unit) {
     if (showOrderSummary && editableIndex >= 0) {
         OrderConfirmDialog(
             formattedDate = formattedDate,
+            suppliers     = suppliers,
             checkStates   = checkStates,
             editableIndex = editableIndex,
             weekId        = weekInfo.weekId,
@@ -265,7 +269,7 @@ fun BarProductsScreen(onBack: () -> Unit) {
             HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.primary)
 
             LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
-                BAR_SUPPLIERS.forEach { supplier ->
+                suppliers.forEach { supplier ->
                     item(key = "header_${supplier.id}") {
                         SupplierHeader(supplier = supplier, hScroll = hScroll)
                     }
@@ -382,6 +386,7 @@ private fun ConfirmCta(
 @Composable
 private fun OrderConfirmDialog(
     formattedDate: String,
+    suppliers: List<SupplierSection>,
     checkStates: Map<String, Boolean>,
     editableIndex: Int,
     weekId: String,
@@ -389,7 +394,7 @@ private fun OrderConfirmDialog(
     onDismiss: () -> Unit,
     isReadOnly: Boolean = false,
 ) {
-    val groups = BAR_SUPPLIERS.mapNotNull { supplier ->
+    val groups = suppliers.mapNotNull { supplier ->
         val checked = supplier.products.filter {
             checkStates[checkKey(it.id, editableIndex, weekId)] == true
         }

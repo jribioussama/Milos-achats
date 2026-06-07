@@ -154,12 +154,10 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
         // ── Zone basse : gérant ───────────────────────────────────
         Button(
             onClick  = { AppLogger.log("NAVIGATION", "Tentative accès Gérant"); showPinDialog = true },
-            enabled  = managerEnabled,
             modifier = Modifier.fillMaxWidth().height(64.dp),
             shape    = RoundedCornerShape(16.dp),
             colors   = ButtonDefaults.buttonColors(
-                containerColor         = MaterialTheme.colorScheme.secondary,
-                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                containerColor = MaterialTheme.colorScheme.secondary,
             ),
         ) {
             Text(
@@ -170,8 +168,8 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            text  = if (managerEnabled) "Toutes les commandes validées — accès disponible"
-                    else "Disponible après validation des 3 commandes (Bar, Cuisine, Serveur)",
+            text  = if (managerEnabled) "Toutes les commandes validées"
+                    else "Accès disponible — commandes en attente de validation",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         )

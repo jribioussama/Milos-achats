@@ -19,19 +19,19 @@ data class WeekInfo(
 )
 
 /**
- * La fenêtre de commande commence à 02:00 chaque jour et se termine à 01:59:59 le lendemain.
+ * La fenêtre de commande commence à 06:00 chaque jour et se termine à 05:59:59 le lendemain.
  * Pendant cette fenêtre, seule la colonne J+1 (lendemain du jour d'ouverture) est éditable.
  *
  * Ex : ouverture le 04/05 à 14h → J+1 = 05/05 → colonne "Mar 05" éditable.
- * Ex : ouverture le 05/05 à 01h → encore dans la fenêtre du 04/05 → J+1 = 05/05.
+ * Ex : ouverture le 05/05 à 05h → encore dans la fenêtre du 04/05 → J+1 = 05/05.
  */
 fun getWeekInfo(): WeekInfo {
     val now = Calendar.getInstance()
 
-    // Si l'heure est avant 02:00, on est encore dans la fenêtre du jour précédent.
+    // Si l'heure est avant 06:00, on est encore dans la fenêtre du jour précédent.
     val orderingDay = Calendar.getInstance().apply {
         timeInMillis = now.timeInMillis
-        if (now.get(Calendar.HOUR_OF_DAY) < 4) add(Calendar.DAY_OF_MONTH, -1)
+        if (now.get(Calendar.HOUR_OF_DAY) < 6) add(Calendar.DAY_OF_MONTH, -1)
     }
     // J+1 = lendemain du jour de commande
     val editableDate = Calendar.getInstance().apply {
@@ -47,7 +47,7 @@ fun getWeekInfo(): WeekInfo {
     val monday = Calendar.getInstance().apply {
         timeInMillis = now.timeInMillis
         // Si avant 04:00, la semaine courante est celle du jour précédent
-        if (now.get(Calendar.HOUR_OF_DAY) < 4) add(Calendar.DAY_OF_MONTH, -1)
+        if (now.get(Calendar.HOUR_OF_DAY) < 6) add(Calendar.DAY_OF_MONTH, -1)
         // Rewind to Monday of that day
         val dow = get(Calendar.DAY_OF_WEEK)
         val back = when (dow) { Calendar.SUNDAY -> 6; else -> dow - Calendar.MONDAY }

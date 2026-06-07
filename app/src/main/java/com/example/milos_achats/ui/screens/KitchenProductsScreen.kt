@@ -51,8 +51,9 @@ private val KGreenBg        = Color(0xFF4CAF50)
 @Composable
 fun KitchenProductsScreen(onBack: () -> Unit) {
     val app = LocalContext.current.applicationContext as MilosApp
-    val vm: KitchenProductsViewModel = viewModel(factory = KitchenProductsViewModel.Factory(app.repository))
+    val vm: KitchenProductsViewModel = viewModel(factory = KitchenProductsViewModel.Factory(app.repository, app.catalogRepository))
     val checkStates by vm.checkStates.collectAsStateWithLifecycle()
+    val suppliers   by vm.suppliers.collectAsStateWithLifecycle()
     val weekInfo = remember { getWeekInfo() }
 
     val editableIndex = weekInfo.days.indexOfFirst { it.isEditable }
@@ -62,7 +63,7 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
     val formattedDate = editableDay?.let { "${it.fullName} ${it.dayNumber} $monthName" } ?: ""
 
     val checkedCount = if (editableIndex >= 0)
-        KITCHEN_SUPPLIERS.sumOf { s ->
+        suppliers.sumOf { s ->
             s.products.count { checkStates[checkKey(it.id, editableIndex, weekInfo.weekId)] == true }
         } else 0
 
@@ -77,24 +78,26 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
     val listState       = rememberLazyListState()
     val focusRequester  = remember { FocusRequester() }
 
-    val flatItemIndices: Map<String, Int> = remember {
+    val flatItemIndices: Map<String, Int> = remember(suppliers) {
         buildMap {
             var idx = 0
-            KITCHEN_SUPPLIERS.forEach { supplier ->
+            suppliers.forEach { supplier ->
                 idx++
                 supplier.products.forEachIndexed { j, p -> put(p.id, idx + j) }
                 idx += supplier.products.size
             }
         }
     }
-    val matches = remember(searchQuery) {
+    val matches = remember(searchQuery, suppliers) {
         if (searchQuery.isBlank()) emptyList()
-        else KITCHEN_SUPPLIERS.flatMap { it.products }
+        else suppliers.flatMap { it.products }
             .filter { it.nameFr.contains(searchQuery, ignoreCase = true) || it.nameAr.contains(searchQuery, ignoreCase = true) }
             .mapNotNull { p -> flatItemIndices[p.id]?.let { i -> i to p } }
     }
     val safeMatchIdx   = if (matches.isEmpty()) 0 else currentMatchIdx.coerceIn(0, matches.size - 1)
     val currentMatchId = matches.getOrNull(safeMatchIdx)?.second?.id
+
+    LaunchedEffect(Unit) { vm.syncIfNeeded() }
 
     LaunchedEffect(searchQuery) {
         currentMatchIdx = 0
@@ -141,6 +144,7 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
     if (showConfirmDialog && editableIndex >= 0) {
         KitchenConfirmDialog(
             formattedDate = formattedDate,
+            suppliers     = suppliers,
             checkStates   = checkStates,
             editableIndex = editableIndex,
             weekId        = weekInfo.weekId,
@@ -156,6 +160,7 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
     if (showOrderSummary && editableIndex >= 0) {
         KitchenConfirmDialog(
             formattedDate = formattedDate,
+            suppliers     = suppliers,
             checkStates   = checkStates,
             editableIndex = editableIndex,
             weekId        = weekInfo.weekId,
@@ -250,7 +255,7 @@ fun KitchenProductsScreen(onBack: () -> Unit) {
             KitchenTableHeader(hScroll = hScroll, weekInfo = weekInfo, isConfirmed = isConfirmed)
             HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.primary)
             LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
-                KITCHEN_SUPPLIERS.forEach { supplier ->
+                suppliers.forEach { supplier ->
                     item(key = "k_header_${supplier.id}") {
                         KitchenSupplierHeader(supplier = supplier, hScroll = hScroll)
                     }
@@ -366,6 +371,7 @@ private fun KitchenConfirmCta(
 @Composable
 private fun KitchenConfirmDialog(
     formattedDate: String,
+    suppliers: List<SupplierSection>,
     checkStates: Map<String, Boolean>,
     editableIndex: Int,
     weekId: String,
@@ -373,7 +379,7 @@ private fun KitchenConfirmDialog(
     onDismiss: () -> Unit,
     isReadOnly: Boolean = false,
 ) {
-    val groups = KITCHEN_SUPPLIERS.mapNotNull { supplier ->
+    val groups = suppliers.mapNotNull { supplier ->
         val checked = supplier.products.filter {
             checkStates[checkKey(it.id, editableIndex, weekId)] == true
         }
