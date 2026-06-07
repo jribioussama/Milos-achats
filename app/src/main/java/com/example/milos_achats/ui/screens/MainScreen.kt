@@ -47,8 +47,7 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
     val managerEnabled = ordersStatus.barConfirmed && ordersStatus.kitchenConfirmed && ordersStatus.serverConfirmed
 
     // ── Vérification de mise à jour au démarrage ──────────────────
-    var updateInfo    by remember { mutableStateOf<UpdateInfo?>(null) }
-    var isDownloading by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
     LaunchedEffect(Unit) {
         updateInfo = AppUpdater.checkForUpdate(context)
@@ -56,12 +55,13 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
 
     updateInfo?.let { info ->
         UpdateDialog(
-            info          = info,
-            isDownloading = isDownloading,
-            onDismiss     = { updateInfo = null },
-            onUpdate      = {
-                isDownloading = true
+            info      = info,
+            onDismiss = { updateInfo = null },
+            onUpdate  = {
+                updateInfo = null  // ferme le dialog immédiatement
                 AppUpdater.downloadAndInstall(context, info.apkUrl)
+                // le téléchargement continue en arrière-plan via la notification système
+                // l'installeur s'ouvre automatiquement quand c'est fini
             },
         )
     }
@@ -262,12 +262,11 @@ private fun OrderCta(
 @Composable
 private fun UpdateDialog(
     info: UpdateInfo,
-    isDownloading: Boolean,
     onDismiss: () -> Unit,
     onUpdate: () -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = { if (!isDownloading) onDismiss() },
+        onDismissRequest = onDismiss,
         title = { Text("Mise à jour disponible", fontWeight = FontWeight.Bold) },
         text  = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -279,27 +278,20 @@ private fun UpdateDialog(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                 }
-                if (isDownloading) {
-                    Spacer(Modifier.height(4.dp))
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text(
-                        "Téléchargement en cours…",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    )
-                }
+                Text(
+                    "Le téléchargement démarrera en arrière-plan — une notification vous préviendra quand l'installation sera prête.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                )
             }
         },
         confirmButton = {
-            Button(
-                onClick  = onUpdate,
-                enabled  = !isDownloading,
-            ) {
-                Text(if (isDownloading) "En cours…" else "Mettre à jour")
+            Button(onClick = onUpdate) {
+                Text("Mettre à jour")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isDownloading) {
+            TextButton(onClick = onDismiss) {
                 Text("Plus tard")
             }
         },
