@@ -18,16 +18,18 @@ class MainActivity : ComponentActivity() {
                 AppNavigation()
             }
         }
-        handleInstallIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (AppUpdater.hasPendingInstall(this)) {
+            AppUpdater.installPending(this)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleInstallIntent(intent)
-    }
-
-    private fun handleInstallIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra(AppUpdater.EXTRA_INSTALL_UPDATE, false) == true) {
+        if (intent.getBooleanExtra(AppUpdater.EXTRA_INSTALL_UPDATE, false)) {
             AppUpdater.installPending(this)
         }
     }
