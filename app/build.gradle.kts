@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.milos_achats"
         minSdk = 24
         targetSdk = 35
-        versionCode = 137
-        versionName = "1.37"
+        versionCode = 139
+        versionName = "1.39"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
