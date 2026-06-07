@@ -29,18 +29,42 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.milos_achats.MilosApp
 import com.example.milos_achats.ui.viewmodel.HomeViewModel
+import com.example.milos_achats.BuildConfig
 import com.example.milos_achats.util.AppLogger
+import com.example.milos_achats.util.AppUpdater
+import com.example.milos_achats.util.UpdateInfo
 
 private val StatusGreen = Color(0xFF81C784)  // vert pastel légèrement foncé sur fond bleu
 private val StatusRed   = Color(0xFFE57373)  // rouge-corail légèrement foncé sur fond bleu
 
 @Composable
 fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick: () -> Unit, onManagerClick: () -> Unit) {
-    val app         = LocalContext.current.applicationContext as MilosApp
+    val context       = LocalContext.current
+    val app           = context.applicationContext as MilosApp
     val vm            = viewModel<HomeViewModel>(factory = HomeViewModel.Factory(app.repository))
     val ordersStatus  by vm.ordersStatus.collectAsStateWithLifecycle()
     val formattedDate by vm.formattedDate.collectAsStateWithLifecycle()
     val managerEnabled = ordersStatus.barConfirmed && ordersStatus.kitchenConfirmed && ordersStatus.serverConfirmed
+
+    // ── Vérification de mise à jour au démarrage ──────────────────
+    var updateInfo    by remember { mutableStateOf<UpdateInfo?>(null) }
+    var isDownloading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        updateInfo = AppUpdater.checkForUpdate(context)
+    }
+
+    updateInfo?.let { info ->
+        UpdateDialog(
+            info          = info,
+            isDownloading = isDownloading,
+            onDismiss     = { updateInfo = null },
+            onUpdate      = {
+                isDownloading = true
+                AppUpdater.downloadAndInstall(context, info.apkUrl)
+            },
+        )
+    }
 
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput      by remember { mutableStateOf("") }
@@ -173,7 +197,13 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(48.dp))
+        Text(
+            text  = "v${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+        )
+        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -227,6 +257,54 @@ private fun OrderCta(
             }
         }
     }
+}
+
+@Composable
+private fun UpdateDialog(
+    info: UpdateInfo,
+    isDownloading: Boolean,
+    onDismiss: () -> Unit,
+    onUpdate: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isDownloading) onDismiss() },
+        title = { Text("Mise à jour disponible", fontWeight = FontWeight.Bold) },
+        text  = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("La version ${info.versionName} est disponible.")
+                if (info.releaseNotes.isNotBlank()) {
+                    Text(
+                        text  = info.releaseNotes,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
+                if (isDownloading) {
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(
+                        "Téléchargement en cours…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick  = onUpdate,
+                enabled  = !isDownloading,
+            ) {
+                Text(if (isDownloading) "En cours…" else "Mettre à jour")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isDownloading) {
+                Text("Plus tard")
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+    )
 }
 
 @Composable
