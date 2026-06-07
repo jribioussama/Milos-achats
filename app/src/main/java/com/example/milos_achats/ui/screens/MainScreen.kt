@@ -58,10 +58,13 @@ fun MainScreen(onBarClick: () -> Unit, onKitchenClick: () -> Unit, onServerClick
             info      = info,
             onDismiss = { updateInfo = null },
             onUpdate  = {
-                updateInfo = null  // ferme le dialog immédiatement
-                AppUpdater.downloadAndInstall(context, info.apkUrl)
-                // le téléchargement continue en arrière-plan via la notification système
-                // l'installeur s'ouvre automatiquement quand c'est fini
+                updateInfo = null
+                if (AppUpdater.canInstall(context)) {
+                    AppUpdater.downloadAndInstall(context, info.apkUrl)
+                } else {
+                    // Ouvre les paramètres pour activer "Installer des apps inconnues"
+                    AppUpdater.openInstallSettings(context)
+                }
             },
         )
     }
